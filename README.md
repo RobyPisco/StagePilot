@@ -44,6 +44,23 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
      a ogni apertura. Telefono e PC devono stare sulla stessa rete. La coda si legge solo con il codice.
    - **Via cavo (adb):** il brano arriva subito, con il telefono collegato.
    In entrambi i casi Backline chiede conferma prima di aggiungerlo.
+
+   **Pulizia e riconoscimento automatici.** Incollando il tab così com'è da Ultimate Guitar, la pagina:
+   - toglie la tablatura per chitarra (si può tenere con la casella), la testata «Tuning / Key / Capo»,
+     i residui del sito («X», «Last update…») e le sezioni rimaste vuote;
+   - legge la tonalità e il capotasto dalla testata, o deduce la tonalità dagli accordi;
+   - riconosce la canzone: cerca su [LRCLIB](https://lrclib.net) le frasi più ripetute del testo (di solito una è
+     il titolo) e conferma che il testo trovato coincida con quello incollato; a parità di testo tra cover e
+     originale sceglie l'artista più noto su Deezer. Se sbaglia, ci sono le alternative e «Cerca di nuovo»
+     con titolo e artista scritti a mano;
+   - prende la **durata** e, se c'è, il **BPM** da [Deezer](https://developers.deezer.com/api); se Deezer non
+     ha il BPM lo stima dall'anteprima audio di 30 secondi, con un piccolo componente opzionale
+     (`miniaudio`, la pagina lo installa solo se tocchi «Installalo»). La stima è precisa di un paio di BPM,
+     ma un brano lento può uscire al doppio: ci sono i tasti **½** e **×2** e **Batti**.
+   Fuori dal PC non esce mai il testo del brano: partono solo le frasi cercate, titolo e artista.
+   I campi che scrivi a mano non vengono mai sovrascritti. Serve Internet; senza, si compila tutto a mano.
+   Prove: `node tools\pagina-pc\test-pulizia.js` e `python -m unittest test_identifica` (dalla cartella
+   `tools\pagina-pc`); `node prova.js file.txt` mostra cosa viene tolto e i candidati per il titolo.
 1. **Dal PC, in un comando.** Copia il tab sul PC (o salvalo in un `.txt`) e, con il tablet collegato via cavo:
    ```powershell
    .\tools\invia-brano.ps1                  # prende il testo dagli appunti

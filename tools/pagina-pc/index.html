@@ -23,7 +23,8 @@ h2{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
 label{display:block;font-size:13px;color:var(--dim);margin-bottom:4px}
 input,textarea{width:100%;background:var(--pitch);color:var(--ink);border:1px solid var(--outline);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
 input:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:-1px;border-color:var(--amber)}
-textarea{font-family:var(--mono);font-size:14px;min-height:330px;resize:vertical;white-space:pre;overflow:auto;line-height:1.35}
+input[type=checkbox]{width:auto}
+textarea{font-family:var(--mono);font-size:14px;min-height:300px;resize:vertical;white-space:pre;overflow:auto;line-height:1.35}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
 .c2{grid-column:span 3}.c3{grid-column:span 2}.c6{grid-column:span 6}
 @media (max-width:560px){.c2,.c3{grid-column:span 6}}
@@ -31,14 +32,23 @@ textarea{font-family:var(--mono);font-size:14px;min-height:330px;resize:vertical
 button{font:inherit;cursor:pointer;border-radius:10px}
 .btn{background:none;color:var(--ink);border:1px solid var(--outline);padding:11px 16px;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
 .btn:hover{border-color:var(--amber)}
+.small{padding:10px 11px}
 .primary{background:var(--amber);color:var(--on-amber);border:0;font-size:15px;font-weight:700;padding:14px 20px}
 .primary:hover{filter:brightness(1.08)}
 .primary:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.tap{display:flex;gap:8px}
-.tap input{flex:1}
+.tap{display:flex;gap:6px}
+.tap input{flex:1;min-width:0}
 #msg{min-height:22px;font-size:14px}
-.ok{color:var(--ok)}.err{color:var(--warn)}
+.ok{color:var(--ok)}.err{color:var(--warn)}.dim{color:var(--dim)}
+/* riconoscimento */
+#ident{border:1px solid var(--outline);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:15px;background:var(--pitch)}
+#ident .t{font-weight:600}
+#ident .alts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.chip{background:none;color:var(--ink);border:1px solid var(--outline);border-radius:99px;padding:5px 12px;font-size:13px}
+.chip:hover{border-color:var(--amber)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--outline);border-top-color:var(--amber);border-radius:50%;animation:r .8s linear infinite;vertical-align:-1px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
 /* anteprima: come si legge in live */
 #prev{background:var(--pitch);border-radius:10px;padding:16px 18px;max-height:560px;overflow:auto;font-size:19px;font-weight:500}
 .sec{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:16px 0 6px}
@@ -65,24 +75,35 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
   <div class="stack">
     <div class="card">
       <h2>Il testo</h2>
-      <textarea id="raw" spellcheck="false" placeholder="Incolla qui il tab: gli accordi sopra le parole, come lo trovi sul sito. Va bene anche un ChordPro."></textarea>
-      <div class="hint">La riga «Tuning / Key / Capo» dei siti di tab imposta da sola tonalità e capotasto. Gli accordi possono essere anche in Do Re Mi.</div>
+      <textarea id="raw" spellcheck="false" placeholder="Incolla qui il tab così com'è, anche con la tablatura e la testata: lo ripulisco io. Va bene anche un ChordPro."></textarea>
+      <div class="row" style="margin-top:10px;justify-content:space-between">
+        <label style="display:flex;gap:8px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" id="f-droptab" checked> Togli la tablatura per chitarra</label>
+        <span id="clean" class="hint" style="margin:0"></span>
+      </div>
     </div>
 
     <div class="card">
-      <h2>I dati del brano</h2>
+      <h2>Il brano</h2>
+      <div id="ident" hidden></div>
       <div class="grid">
         <div class="c3"><label for="f-title">Titolo *</label><input id="f-title" autocomplete="off"></div>
         <div class="c3"><label for="f-artist">Artista</label><input id="f-artist" autocomplete="off"></div>
-        <div class="c2"><label for="f-key">Tonalità</label><input id="f-key" placeholder="Am, Do, F#m…" autocomplete="off"></div>
+        <div class="c2"><label for="f-key">Tonalità</label><input id="f-key" placeholder="Am, Do, F#m…" autocomplete="off"><div class="hint" id="keysrc"></div></div>
         <div class="c2"><label for="f-bpm">BPM</label>
-          <div class="tap"><input id="f-bpm" inputmode="numeric" autocomplete="off"><button class="btn" id="tap" type="button" title="Batti il tempo toccando più volte">Batti</button></div></div>
+          <div class="tap"><input id="f-bpm" inputmode="numeric" autocomplete="off">
+            <button class="btn small" id="half" type="button" title="Dimezza: se il tempo è il doppio di quello vero">½</button>
+            <button class="btn small" id="dbl" type="button" title="Raddoppia">×2</button>
+            <button class="btn small" id="tap" type="button" title="Batti il tempo toccando più volte">Batti</button></div>
+          <div class="hint" id="bpmsrc"></div></div>
         <div class="c2"><label for="f-dur">Durata</label><input id="f-dur" placeholder="3:40" autocomplete="off"></div>
         <div class="c2"><label for="f-capo">Capotasto</label><input id="f-capo" inputmode="numeric" value="0" autocomplete="off"></div>
         <div class="c2"><label for="f-lead">Attesa (s)</label><input id="f-lead" inputmode="numeric" value="0" autocomplete="off"><div class="hint">prima dello scorrimento</div></div>
         <div class="c2"><label for="f-tags">Tag</label><input id="f-tags" placeholder="cover, lenta" autocomplete="off"></div>
         <div class="c6"><label for="f-note">Nota per tutta la band</label><input id="f-note" placeholder="es. Attacco secco, senza conteggio" autocomplete="off"></div>
-        <div class="c6"><label style="display:flex;gap:8px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" id="f-inset" checked style="width:auto"> Metti anche in coda alla scaletta in uso</label></div>
+        <div class="c6 row">
+          <label style="display:flex;gap:8px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" id="f-inset" checked> Metti anche in coda alla scaletta in uso</label>
+          <button class="btn small" id="search" type="button" style="margin-left:auto" title="Cerca di nuovo con il titolo e l'artista scritti qui">Cerca di nuovo</button>
+        </div>
       </div>
     </div>
   </div>
@@ -117,50 +138,33 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
 </main>
 
 <script src="convert.bundle.js"></script>
+<script src="pulizia.js"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var F = ['title', 'artist', 'key', 'bpm', 'dur', 'capo', 'lead', 'tags', 'note'];
-  var touched = {};
+  var touched = {};          // campi che l'utente ha scritto a mano: non si sovrascrivono mai
   var body = '';
+  var info = {};             // dati riconosciuti: { bpmSource, keySource }
+  var runId = 0;             // per scartare le risposte di ricerche superate
+  var audioOk = false;
 
-  F.forEach(function (n) { $('f-' + n).addEventListener('input', function () { touched[n] = true; }); });
+  F.forEach(function (n) { $('f-' + n).addEventListener('input', function () { touched[n] = true; if (n === 'bpm') info.bpmSource = 'a mano'; showSrc(); }); });
 
-  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function setIfFree(n, v) { if (!touched[n] && v !== undefined && v !== null && v !== '') $('f-' + n).value = v; }
-
-  // la testata dei siti di tab e le direttive ChordPro: dati, non musica
-  function readHeader(text) {
-    var meta = {};
-    var keep = [];
-    text.replace(/\r\n?/g, '\n').split('\n').forEach(function (l) {
-      if (/^\s*(Tuning|Key|Capo)\s*:/i.test(l)) {
-        var k = /Key:\s*([A-G][#b]?m?)/.exec(l); if (k && !meta.key) meta.key = k[1];
-        var c = /Capo:\s*(\d{1,2})/.exec(l); if (c && !meta.capo) meta.capo = c[1];
-        return;
-      }
-      var d = /^\s*\{\s*(title|t|artist|subtitle|st|key|capo)\s*:\s*([^}]*)\}\s*$/i.exec(l);
-      if (d) {
-        var n = d[1].toLowerCase(), v = d[2].trim();
-        if ((n === 'title' || n === 't') && !meta.title) meta.title = v;
-        else if ((n === 'artist' || n === 'subtitle' || n === 'st') && !meta.artist) meta.artist = v;
-        else if (n === 'key' && !meta.key) meta.key = v;
-        else if (n === 'capo' && !meta.capo) meta.capo = v;
-        return;
-      }
-      keep.push(l);
-    });
-    return { meta: meta, text: keep.join('\n') };
+  function showSrc() {
+    $('bpmsrc').textContent = $('f-bpm').value ? (info.bpmSource ? 'BPM ' + info.bpmSource : '') : '';
+    $('keysrc').textContent = $('f-key').value ? (info.keySource ? info.keySource : '') : '';
   }
 
-  function isTab(l) { return /^\s*[A-Ga-g][#b]?\|.*-.*$/.test(l); }
-
+  // ── anteprima come in live ────────────────────────────────────────────────
   function render(cp) {
     if (!cp.trim()) return '<div class="empty">L\'anteprima compare appena incolli il testo.</div>';
     return cp.split('\n').map(function (line) {
       if (!line.trim()) return '<div class="blank"></div>';
       if (/^\s*#/.test(line)) return '<div class="sec">' + esc(line.replace(/^\s*#\s?/, '')) + '</div>';
-      if (isTab(line)) return '<pre class="tab">' + esc(line.replace(/\s+$/, '')) + '</pre>';
+      if (PC.isTabLine(line)) return '<pre class="tab">' + esc(line.replace(/\s+$/, '')) + '</pre>';
       var parts = line.split(/\[([^\]]+)\]/);              // testo, accordo, testo, accordo…
       var out = '<div class="ln">';
       if (parts[0]) out += '<span class="s"><i>&nbsp;</i><span>' + esc(parts[0]) + '</span></span>';
@@ -171,12 +175,12 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     }).join('');
   }
 
+  // ── pulizia ───────────────────────────────────────────────────────────────
+  var identTimer = null, lastLyricsKey = '';
   function update() {
     var raw = $('raw').value;
-    var h = readHeader(raw);
-    setIfFree('key', h.meta.key); setIfFree('capo', h.meta.capo);
-    setIfFree('title', h.meta.title); setIfFree('artist', h.meta.artist);
-    body = raw.trim() ? BL.normalizeBody(BL.tabToChordPro(h.text)) : '';
+    var res = PC.toChordPro(raw, { dropTab: $('f-droptab').checked });
+    body = res.body;
     $('prev').innerHTML = render(body);
     var chords = (body.match(/\[[^\]]+\]/g) || []).length;
     var sections = (body.match(/^#/mg) || []).length;
@@ -184,10 +188,97 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
       ? 'Non trovo accordi: devono stare su righe a parte, sopra il testo.'
       : chords + ' accordi · ' + sections + ' sezioni';
     $('stat').className = 'hint' + (raw.trim() && chords === 0 ? ' err' : '');
+    var r = res.removed, bits = [];
+    if (r.tab) bits.push(r.tab + ' righe di tablatura');
+    if (r.header) bits.push('la testata');
+    if (r.junk) bits.push(r.junk + (r.junk === 1 ? ' residuo' : ' residui') + ' del sito');
+    if (r.emptySections) bits.push(r.emptySections + (r.emptySections === 1 ? ' sezione vuota' : ' sezioni vuote'));
+    $('clean').textContent = bits.length ? 'Tolto: ' + bits.join(', ') : '';
+
+    // dati che stanno già nel testo
+    setIfFree('capo', res.meta.capo); setIfFree('title', res.meta.title); setIfFree('artist', res.meta.artist);
+    if (res.meta.key) { setIfFree('key', res.meta.key); if (!touched.key) info.keySource = 'dalla testata'; }
+    else if (chords >= 3 && !touched.key) { var k = PC.inferKey(body); if (k) { $('f-key').value = k; info.keySource = 'dedotta dagli accordi'; } }
+    showSrc();
+
+    // riconoscimento della canzone: solo se il testo è cambiato davvero, e dopo una pausa nella digitazione
+    clearTimeout(identTimer);
+    var key = PC.lyricLines(body).join('|');
+    if (chords >= 3 && key !== lastLyricsKey) {
+      lastLyricsKey = key;
+      identTimer = setTimeout(function () { identify(false); }, 900);
+    } else if (!raw.trim()) { lastLyricsKey = ''; $('ident').hidden = true; }
   }
   $('raw').addEventListener('input', update);
+  $('f-droptab').addEventListener('change', update);
 
-  // batti il tempo: più tocchi, media degli ultimi intervalli
+  // ── riconoscimento (titolo, artista, durata, BPM) ─────────────────────────
+  function showIdent(html) { $('ident').innerHTML = html; $('ident').hidden = !html; }
+
+  function identify(forced) {
+    var my = ++runId;
+    var typedTitle = $('f-title').value.trim(), typedArtist = $('f-artist').value.trim();
+    var useTyped = forced || touched.title;
+    showIdent('<span class="spin"></span>Cerco la canzone in rete…');
+    post('/api/identify', {
+      lyrics: PC.lyricLines(body), guesses: PC.guessTitles(body),
+      title: useTyped ? typedTitle : '', artist: useTyped ? typedArtist : ''
+    }).then(function (r) {
+      if (my !== runId) return;                              // nel frattempo è cambiato il testo
+      var j = r.j || {};
+      if (j.found) return applyFound(j, forced);
+      showIdent('<span class="dim">Non riconosco la canzone' + (j.error ? ' (' + esc(j.error) + ')' : '') +
+        '. Scrivi titolo e artista qui sotto e premi «Cerca di nuovo».</span>');
+    }).catch(function () {
+      if (my === runId) showIdent('<span class="err">Il server del PC non risponde.</span>');
+    });
+  }
+
+  function applyFound(j, forced) {
+    // i campi scritti a mano restano; con «Cerca di nuovo» o una scelta fra le alternative si riempiono di nuovo
+    if (forced) { touched.title = false; touched.artist = false; touched.dur = false; touched.bpm = false; }
+    setIfFree('title', j.title); setIfFree('artist', j.artist); setIfFree('dur', j.dur);
+    if (j.bpm && !touched.bpm) {
+      $('f-bpm').value = Math.round(j.bpm);
+      info.bpmSource = j.bpm_source === 'audio' ? 'stimato dall\'audio (controlla: può uscire il doppio o la metà)' : 'da Deezer';
+    }
+    showSrc();
+    var pct = Math.round((j.score || 0) * 100);
+    var html = '<div><span class="ok">Riconosciuta</span> · <span class="t">' + esc(j.title) + '</span> — ' + esc(j.artist) +
+      ' <span class="dim">· testo uguale al ' + pct + '%' + (j.bpm ? '' : ' · BPM non trovato') + '</span></div>';
+    if (!j.bpm && j.bpm_hint === 'manca' && !audioOk) {
+      html += '<div class="hint">Per stimare il BPM dall\'audio serve un piccolo componente (miniaudio). ' +
+        '<button class="chip" id="install-bpm" type="button">Installalo</button></div>';
+    }
+    if (j.alternatives && j.alternatives.length) {
+      html += '<div class="hint" style="margin-top:8px">Non è questa? Prova con:</div><div class="alts">' +
+        j.alternatives.map(function (a, i) { return '<button class="chip alt" data-i="' + i + '" type="button">' + esc(a.title) + ' — ' + esc(a.artist) + '</button>'; }).join('') + '</div>';
+    }
+    showIdent(html);
+    $('ident')._alts = j.alternatives || [];
+  }
+
+  $('ident').addEventListener('click', function (ev) {
+    var t = ev.target;
+    if (t.classList.contains('alt')) {
+      var a = $('ident')._alts[+t.getAttribute('data-i')];
+      $('f-title').value = a.title; $('f-artist').value = a.artist; identify(true);
+    } else if (t.id === 'install-bpm') {
+      t.disabled = true; t.textContent = 'Installo…';
+      post('/api/install-bpm', {}).then(function (r) {
+        if (r.ok) { audioOk = true; identify(false); } else { t.textContent = 'Non riuscito'; msg((r.j && r.j.message) || 'Installazione non riuscita', 'err'); }
+      });
+    }
+  });
+  $('search').addEventListener('click', function () { identify(true); });
+
+  // ── BPM: ½, ×2 e batti il tempo ───────────────────────────────────────────
+  function scaleBpm(f) {
+    var v = parseFloat($('f-bpm').value); if (!v) return;
+    $('f-bpm').value = Math.round(v * f); touched.bpm = true; info.bpmSource = 'corretto a mano'; showSrc();
+  }
+  $('half').addEventListener('click', function () { scaleBpm(0.5); });
+  $('dbl').addEventListener('click', function () { scaleBpm(2); });
   var taps = [];
   $('tap').addEventListener('click', function () {
     var now = Date.now();
@@ -195,10 +286,11 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     taps.push(now); if (taps.length > 9) taps.shift();
     if (taps.length >= 3) {
       var avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
-      $('f-bpm').value = Math.round(60000 / avg); touched.bpm = true;
+      $('f-bpm').value = Math.round(60000 / avg); touched.bpm = true; info.bpmSource = 'battuto a mano'; showSrc();
     }
   });
 
+  // ── invio ─────────────────────────────────────────────────────────────────
   function msg(text, cls) { $('msg').textContent = text; $('msg').className = cls || ''; }
 
   function buildSong() {
@@ -223,9 +315,10 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
   }
 
   function reset() {
-    $('raw').value = ''; touched = {};
+    runId++; clearTimeout(identTimer); lastLyricsKey = '';
+    $('raw').value = ''; touched = {}; info = {};
     F.forEach(function (n) { $('f-' + n).value = (n === 'capo' || n === 'lead') ? '0' : ''; });
-    update(); $('raw').focus();
+    showIdent(''); update(); $('raw').focus();
   }
 
   function send(url, label) {
@@ -246,6 +339,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
 
   function refresh() {
     fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
+      audioOk = !!s.bpmAudio;
       $('addr').textContent = s.ip + ':' + s.port; $('code').textContent = s.code;
       $('conn').textContent = s.adb === null ? 'adb non trovato'
         : s.adb.length ? 'Telefono collegato via cavo ✓' : 'Nessun cavo collegato';

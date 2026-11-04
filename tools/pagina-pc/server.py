@@ -27,7 +27,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BACKLINE_PORT", "8765"))
 STATE_FILE = HERE / "stato.json"          # codice e coda: restano fra un avvio e l'altro
-STATIC = {"/": "index.html", "/index.html": "index.html", "/convert.bundle.js": "convert.bundle.js"}
+STATIC = {"/": "index.html", "/index.html": "index.html", "/convert.bundle.js": "convert.bundle.js",
+          "/pulizia.js": "pulizia.js"}
+sys.path.insert(0, str(HERE))                  # identifica.py e bpm.py stanno accanto a questo file
 LOCK = threading.Lock()
 
 
@@ -107,6 +109,26 @@ def adb_send(package):
     except (OSError, subprocess.SubprocessError) as e:
         return False, "adb non risponde: " + str(e)
     return True, "Inviato: guarda il telefono."
+
+
+def has_audio_bpm():
+    """Il componente opzionale per stimare il BPM dall'audio è installato?"""
+    import importlib.util
+    return importlib.util.find_spec("miniaudio") is not None
+
+
+def install_audio_bpm():
+    """Installa `miniaudio` per l'utente corrente (pip --user). Solo su richiesta, dal pulsante della pagina."""
+    try:
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "--user", "--quiet", "miniaudio"],
+                           capture_output=True, text=True, timeout=240)
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, "pip non è partito: " + str(e)
+    if r.returncode != 0:
+        return False, "L'installazione non è riuscita: " + (r.stderr or r.stdout).strip()[-300:]
+    import importlib
+    importlib.invalidate_caches()
+    return True, "Componente installato."
 
 
 # ── server ──────────────────────────────────────────────────────────────────
@@ -194,7 +216,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status" and self.local():
             with LOCK:
                 q = [{"id": e["id"], "title": e["song"]["title"], "artist": e["song"]["artist"]} for e in STATE["queue"]]
-            return self.send_json({"ip": lan_ip(), "port": PORT, "code": STATE["code"], "queue": q, "adb": adb_devices()})
+            return self.send_json({"ip": lan_ip(), "port": PORT, "code": STATE["code"], "queue": q, "adb": adb_devices(),
+                                   "bpmAudio": has_audio_bpm()})
         if path == "/api/inbox":                  # il telefono: coda dei brani, con il codice
             if not self.code_ok():
                 return self.send_json({"error": "codice errato"}, 403)
@@ -220,6 +243,21 @@ class Handler(BaseHTTPRequestHandler):
 
         if not self.local():
             return self.send_json({"error": "solo dal PC"}, 403)
+
+        if path == "/api/identify":               # riconosce la canzone dal testo (può volerci qualche secondo)
+            import identifica
+            lyrics = [l for l in (data.get("lyrics") or []) if isinstance(l, str)][:400]
+            guesses = [g for g in (data.get("guesses") or []) if isinstance(g, str)][:12]
+            title = str(data.get("title") or "").strip()[:120]
+            artist = str(data.get("artist") or "").strip()[:120]
+            try:
+                return self.send_json(identifica.identify(lyrics, guesses, title, artist, log=lambda *_: None))
+            except Exception as e:                # la rete può mancare: la pagina lascia i campi da compilare
+                return self.send_json({"found": False, "error": "Non riesco a cercare in rete: %s" % e})
+
+        if path == "/api/install-bpm":
+            ok, msg = install_audio_bpm()
+            return self.send_json({"ok": ok, "message": msg}, 200 if ok else 500)
 
         songs = [clean_song(s) for s in (data.get("songs") or []) if isinstance(s, dict)]
         songs = [s for s in songs if s["title"] and s["body"].strip()]
