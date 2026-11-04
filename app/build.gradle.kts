@@ -20,7 +20,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // App per uso personale: si riduce con R8 ma si firma con la chiave di debug,
+            // che basta per installarla a mano (adb o file APK). Per uno store servirebbe una chiave vera.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
