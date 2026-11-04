@@ -37,6 +37,8 @@ sealed interface SheetLine {
     data object Blank : SheetLine
     data class Section(val text: String) : SheetLine
     data class Lyric(val segs: List<ShownSeg>) : SheetLine
+    /** Una riga di tablatura: si mostra a spaziatura fissa. */
+    data class Tab(val text: String) : SheetLine
 }
 
 data class SheetOpts(
@@ -57,6 +59,8 @@ fun renderSheet(body: String?, o: SheetOpts = SheetOpts()): List<SheetLine> =
         when {
             line.isBlank() -> SheetLine.Blank
             line.trim().startsWith("#") -> SheetLine.Section(line.replace(Regex("""^\s*#\s?"""), ""))
+            // la tablatura resta com'è (a spaziatura fissa); a chi canta non serve
+            isTabLine(line) -> if (o.plain) null else SheetLine.Tab(line.trimEnd())
             else -> {
                 val parts = segs(line)
                 when {

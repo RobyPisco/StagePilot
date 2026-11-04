@@ -10,6 +10,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,17 +47,34 @@ import java.util.Date
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    /** Testo arrivato da fuori ("Condividi con Backline", o dal PC): si consuma una volta sola. */
+    private val incoming = mutableStateOf<String?>(null)
+
+    private fun readShared(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { incoming.value = it }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val store = Store(applicationContext)
-        setContent { BacklineTheme { App(store) } }
+        // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
+        if (savedInstanceState == null) readShared(intent)
+        setContent { BacklineTheme { App(store, incoming) } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readShared(intent)
     }
 }
 
 private fun toast(context: Context, msg: String) = Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
 @Composable
-private fun App(store: Store) {
+private fun App(store: Store, incoming: MutableState<String?>) {
     val context = LocalContext.current
     val db by store.db.collectAsStateWithLifecycle()
     val band = db.band
@@ -71,6 +90,20 @@ private fun App(store: Store) {
     var draft by remember { mutableStateOf<Song?>(null) }
     // backup letto da file, in attesa che si scelga cosa farne
     var pendingBackup by remember { mutableStateOf<DB?>(null) }
+    // testo con cui parte l'importazione (vuoto se si è aperta a mano)
+    var importText by rememberSaveable { mutableStateOf("") }
+
+    // un tab condiviso da un'altra app o mandato dal PC: si apre l'importazione già con il testo
+    val shared = incoming.value
+    LaunchedEffect(shared) {
+        if (shared != null) {
+            importText = shared
+            newId = store.newId("s")
+            draft = null
+            route = "import"
+            incoming.value = null
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
@@ -116,6 +149,7 @@ private fun App(store: Store) {
 
         "import" -> ImportScreen(
             newId = newId,
+            initial = importText,
             onContinue = { draft = it; editId = null; route = "edit" },
             onClose = { route = "main" },
         )
@@ -161,7 +195,7 @@ private fun App(store: Store) {
             onTab = { tab = it },
             onOpenSong = { id -> editId = id; route = "edit" },
             onNewSong = { editId = null; draft = null; newId = store.newId("s"); route = "edit" },
-            onImport = { draft = null; newId = store.newId("s"); route = "import" },
+            onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
             onSettings = { route = "settings" },
             onSort = { s -> store.updateOptions { it.copy(sort = s) } },
         )

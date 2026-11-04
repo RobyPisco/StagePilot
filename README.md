@@ -31,6 +31,24 @@ adb shell am start -n it.backline.app/.MainActivity
 
 `minSdk 29` (Android 10). Provata su Fire HD 8 con LineageOS 17.1.
 
+## Portare un brano dentro Backline
+
+Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla più comoda:
+
+1. **Dal PC, in un comando.** Copia il tab sul PC (o salvalo in un `.txt`) e, con il tablet collegato via cavo:
+   ```powershell
+   .\tools\invia-brano.ps1                  # prende il testo dagli appunti
+   .\tools\invia-brano.ps1 -File brano.txt  # oppure da un file
+   ```
+   Backline si apre sull'importazione, con l'anteprima. Si tocca Continua, si controllano titolo, BPM e
+   durata e si salva. La tonalità e il capotasto si leggono dalla riga "Tuning / Key / Capo" dei siti di tab.
+2. **Condividi con Backline.** Da qualunque app Android che condivide testo.
+3. **Apri file** nella schermata di importazione, per un `.txt` mandato sul tablet (cavo, cloud, posta).
+4. **Backup JSON** dell'app web: Impostazioni → Importa.
+
+Le righe di tablatura per chitarra (`e|---0---|`) restano com'erano, a spaziatura fissa; chi canta, con
+"Solo testo", non le vede.
+
 ## Dati
 
 Un solo file `db.json` nella memoria privata dell'app, scritto su un file temporaneo e poi rinominato.

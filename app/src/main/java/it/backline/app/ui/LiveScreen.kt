@@ -362,6 +362,11 @@ private fun SheetLineView(line: SheetLine, fs: Int) {
             line.text.uppercase(), color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Bold,
             fontSize = 13.sp, letterSpacing = 2.4.sp, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
         )
+        // tablatura: spaziatura fissa e senza andare a capo, se no le note si disallineano
+        is SheetLine.Tab -> Text(
+            line.text, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.Medium,
+            fontSize = (fs * 0.55f).coerceIn(10f, 18f).sp, softWrap = false, maxLines = 1,
+        )
         is SheetLine.Lyric -> {
             val anyChord = line.segs.any { it.chord.isNotEmpty() }
             val anyText = line.segs.any { it.text.isNotEmpty() }

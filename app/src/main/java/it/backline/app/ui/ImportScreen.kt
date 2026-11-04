@@ -1,6 +1,8 @@
 package it.backline.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,9 +49,16 @@ import it.backline.app.data.Song
    "Continua" il risultato passa all'editor, dove si rifinisce e si salva. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ImportScreen(newId: String, onContinue: (Song) -> Unit, onClose: () -> Unit) {
-    var raw by rememberSaveable { mutableStateOf("") }
+fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit, onClose: () -> Unit) {
+    var raw by rememberSaveable { mutableStateOf(initial) }
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    // un file di testo mandato sul tablet in qualunque modo (cavo, cloud, posta…)
+    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+        }.getOrNull()?.let { raw = it }
+    }
     val converted = remember(raw) { tabToChordPro(raw) }
     val preview = remember(converted) { renderSheet(converted) }
     val chords = remember(converted) { Regex("""\[[^\]]+]""").findAll(converted).count() }
@@ -78,7 +88,7 @@ fun ImportScreen(newId: String, onContinue: (Song) -> Unit, onClose: () -> Unit)
                         .background(if (ready) Palco.Amber else Palco.Outline, RoundedCornerShape(10.dp))
                         .clickable(enabled = ready) {
                             val meta = chordProMeta(raw)
-                            onContinue(Song(id = newId, title = meta.title, artist = meta.artist, key = meta.key, body = converted))
+                            onContinue(Song(id = newId, title = meta.title, artist = meta.artist, key = meta.key, capo = meta.capo, body = converted))
                         }
                         .padding(horizontal = 18.dp, vertical = 10.dp),
                 )
@@ -96,6 +106,7 @@ fun ImportScreen(newId: String, onContinue: (Song) -> Unit, onClose: () -> Unit)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GhostButton("Incolla dagli appunti") { clipboard.getText()?.text?.let { raw = it } }
+                    GhostButton("Apri file") { openFile.launch(arrayOf("*/*")) }
                     if (raw.isNotEmpty()) GhostButton("Svuota") { raw = "" }
                 }
                 PalcoField(raw, { raw = it }, "Testo da importare", singleLine = false, minLines = 6, mono = true)
@@ -119,6 +130,10 @@ fun ImportScreen(newId: String, onContinue: (Song) -> Unit, onClose: () -> Unit)
                                 is SheetLine.Section -> Text(
                                     l.text.uppercase(), color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 6.dp),
+                                )
+                                is SheetLine.Tab -> Text(
+                                    l.text, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.Medium,
+                                    fontSize = 11.sp, softWrap = false, maxLines = 1,
                                 )
                                 is SheetLine.Lyric -> FlowRow {
                                     l.segs.forEach { s ->
