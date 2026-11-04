@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.backline.app.data.DB
@@ -40,10 +41,16 @@ import it.backline.app.data.Store
 /* Gruppo, scalette, modo di leggere e backup: tutto quello che non serve
    sul palco sta qui, fuori dalla strada. */
 @Composable
-fun SettingsScreen(db: DB, store: Store, onClose: () -> Unit, onExport: () -> Unit, onImport: () -> Unit) {
+fun SettingsScreen(
+    db: DB, store: Store, onClose: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
+    pcAddr: String, pcCode: String, pcStatus: String, pcBusy: Boolean,
+    onPcSave: (String, String) -> Unit, onPcFetch: () -> Unit,
+) {
     val band = db.band
     val opt = db.opt
     var bandName by remember(band.id) { mutableStateOf(band.name) }
+    var addr by remember { mutableStateOf(pcAddr) }
+    var code by remember { mutableStateOf(pcCode) }
 
     // dialoghi: quale è aperto e su cosa
     var newBandDialog by remember { mutableStateOf(false) }
@@ -147,6 +154,25 @@ fun SettingsScreen(db: DB, store: Store, onClose: () -> Unit, onExport: () -> Un
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GhostButton("Esporta") { onExport() }
                     GhostButton("Importa") { onImport() }
+                }
+
+                // ── brani dal PC ──
+                Section("Brani dal PC")
+                Hint(
+                    "Sul PC apri la pagina di Backline (tools\\pagina-pc\\avvia.cmd): lì scrivi testo, BPM e dati, e premi Invia. " +
+                        "Qui metti una volta sola l'indirizzo e il codice che la pagina mostra. Backline controlla da solo " +
+                        "ogni volta che si apre, se telefono e PC sono sulla stessa Wi-Fi.",
+                )
+                PalcoField(
+                    addr, { addr = it; onPcSave(it, code) }, "Indirizzo del PC", supporting = "es. 192.168.178.32:8765",
+                )
+                PalcoField(
+                    code, { code = it.filter(Char::isDigit).take(6); onPcSave(addr, code) }, "Codice",
+                    keyboard = KeyboardType.Number, supporting = "4 cifre, le mostra la pagina",
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GhostButton(if (pcBusy) "Cerco…" else "Scarica") { if (!pcBusy) onPcFetch() }
+                    if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 }
 
                 Spacer(Modifier.height(8.dp))

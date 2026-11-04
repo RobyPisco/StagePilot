@@ -90,6 +90,9 @@ class Store(context: Context) {
     /** Sostituisce tutto il database con quello del backup. */
     fun replaceAll(other: DB) = update { normalizeDb(other) }
 
+    /** Aggiunge al gruppo in uso i brani preparati con la pagina del PC. */
+    fun addPcSongs(songs: List<PcSong>) = update { normalizeDb(addPcSongs(it, songs, ::newId)) }
+
     /** Aggiunge i gruppi del backup come gruppi nuovi, senza toccare i tuoi. */
     fun addBands(other: DB) = update { normalizeDb(mergeAsNewBands(it, other, ::newId)) }
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -26,10 +27,15 @@ import it.backline.app.core.keyLabel
 import it.backline.app.core.moveItem
 import it.backline.app.core.setAsText
 import it.backline.app.data.DB
+import it.backline.app.data.PcClient
+import it.backline.app.data.PcException
+import it.backline.app.data.PcSong
 import it.backline.app.data.SetItem
 import it.backline.app.data.Song
 import it.backline.app.data.Store
 import it.backline.app.data.decodeBackup
+import it.backline.app.data.parsePcPackage
+import kotlinx.coroutines.launch
 import it.backline.app.data.entries
 import it.backline.app.ui.BacklineTheme
 import it.backline.app.ui.Condensed
@@ -50,9 +56,14 @@ class MainActivity : ComponentActivity() {
     /** Testo arrivato da fuori ("Condividi con Backline", o dal PC): si consuma una volta sola. */
     private val incoming = mutableStateOf<String?>(null)
 
+    /** Brani preparati con la pagina del PC e mandati con adb. */
+    private val incomingSongs = mutableStateOf<List<PcSong>?>(null)
+
     private fun readShared(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND) {
-            intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { incoming.value = it }
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() } ?: return
+            val songs = parsePcPackage(text)
+            if (songs != null) incomingSongs.value = songs else incoming.value = text
         }
     }
 
@@ -61,7 +72,7 @@ class MainActivity : ComponentActivity() {
         val store = Store(applicationContext)
         // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
         if (savedInstanceState == null) readShared(intent)
-        setContent { BacklineTheme { App(store, incoming) } }
+        setContent { BacklineTheme { App(store, incoming, incomingSongs) } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -73,9 +84,14 @@ class MainActivity : ComponentActivity() {
 
 private fun toast(context: Context, msg: String) = Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
+/** Brani in attesa di conferma. `ackIds` sono quelli da togliere dalla coda del PC (vuoto se arrivano da adb). */
+private class PcBatch(val songs: List<PcSong>, val ackIds: List<String>)
+
 @Composable
-private fun App(store: Store, incoming: MutableState<String?>) {
+private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: MutableState<List<PcSong>?>) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val prefs = remember { context.getSharedPreferences("pc", Context.MODE_PRIVATE) }
     val db by store.db.collectAsStateWithLifecycle()
     val band = db.band
 
@@ -92,6 +108,49 @@ private fun App(store: Store, incoming: MutableState<String?>) {
     var pendingBackup by remember { mutableStateOf<DB?>(null) }
     // testo con cui parte l'importazione (vuoto se si è aperta a mano)
     var importText by rememberSaveable { mutableStateOf("") }
+
+    // ── brani dalla pagina del PC ──
+    var pcAddr by remember { mutableStateOf(prefs.getString("addr", "") ?: "") }
+    var pcCode by remember { mutableStateOf(prefs.getString("code", "") ?: "") }
+    var pcStatus by remember { mutableStateOf("") }
+    var pcBusy by remember { mutableStateOf(false) }
+    // brani in attesa di conferma (dalla coda del PC o mandati con adb)
+    var pendingPc by remember { mutableStateOf<PcBatch?>(null) }
+
+    fun fetchPc(silent: Boolean) {
+        if (pcAddr.isBlank() || pcCode.isBlank()) {
+            if (!silent) pcStatus = "Scrivi l'indirizzo e il codice."
+            return
+        }
+        scope.launch {
+            pcBusy = true
+            try {
+                val songs = PcClient.fetch(pcAddr, pcCode)
+                if (songs.isEmpty()) {
+                    if (!silent) pcStatus = "Niente di nuovo sul PC."
+                } else {
+                    pendingPc = PcBatch(songs, songs.map { it.id })
+                    pcStatus = "${songs.size} ${if (songs.size == 1) "brano" else "brani"} sul PC."
+                }
+            } catch (e: PcException) {
+                if (!silent) pcStatus = e.message ?: "Errore"
+            } finally {
+                pcBusy = false
+            }
+        }
+    }
+
+    // all'apertura dell'app: se è configurato, si guarda se il PC ha qualcosa in coda (senza disturbare se non c'è)
+    LaunchedEffect(Unit) { fetchPc(silent = true) }
+
+    // brani mandati con adb: si chiede conferma come per quelli scaricati
+    val sharedSongs = incomingSongs.value
+    LaunchedEffect(sharedSongs) {
+        if (sharedSongs != null) {
+            pendingPc = PcBatch(sharedSongs, emptyList())
+            incomingSongs.value = null
+        }
+    }
 
     // un tab condiviso da un'altra app o mandato dal PC: si apre l'importazione già con il testo
     val shared = incoming.value
@@ -145,6 +204,15 @@ private fun App(store: Store, incoming: MutableState<String?>) {
                 exportLauncher.launch("backline-backup-$stamp.json")
             },
             onImport = { importLauncher.launch(arrayOf("*/*")) },
+            pcAddr = pcAddr,
+            pcCode = pcCode,
+            pcStatus = pcStatus,
+            pcBusy = pcBusy,
+            onPcSave = { a, c ->
+                pcAddr = a; pcCode = c
+                prefs.edit().putString("addr", a).putString("code", c).apply()
+            },
+            onPcFetch = { pcStatus = ""; fetchPc(silent = false) },
         )
 
         "import" -> ImportScreen(
@@ -199,6 +267,37 @@ private fun App(store: Store, incoming: MutableState<String?>) {
             onSettings = { route = "settings" },
             onSort = { s -> store.updateOptions { it.copy(sort = s) } },
         )
+    }
+
+    pendingPc?.let { batch ->
+        val n = batch.songs.size
+        PalcoDialog(
+            title = if (n == 1) "Un brano dal PC" else "$n brani dal PC",
+            confirmText = "Aggiungi",
+            onConfirm = {
+                store.addPcSongs(batch.songs)
+                scope.launch { runCatching { PcClient.ack(pcAddr, pcCode, batch.ackIds) } }
+                pendingPc = null
+                pcStatus = ""
+                toast(context, if (n == 1) "Brano aggiunto" else "$n brani aggiunti")
+            },
+            onDismiss = { pendingPc = null },
+        ) {
+            androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                batch.songs.take(8).forEach { s ->
+                    Text(
+                        s.title + if (s.artist.isNotBlank()) " — ${s.artist}" else "",
+                        color = Palco.Ink, fontFamily = Condensed, fontSize = 16.sp,
+                    )
+                }
+                if (n > 8) Text("e altri ${n - 8}…", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                Text(
+                    "Finiscono nel repertorio di «${db.band.name}»" +
+                        if (batch.songs.any { it.inSet }) ", e in coda alla scaletta in uso." else ".",
+                    color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp,
+                )
+            }
+        }
     }
 
     pendingBackup?.let { b ->

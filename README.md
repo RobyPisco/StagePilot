@@ -35,6 +35,15 @@ adb shell am start -n it.backline.app/.MainActivity
 
 Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla più comoda:
 
+0. **La pagina del PC** (`tools\pagina-pc\avvia.cmd`, serve Python). Si apre nel browser: incolli il tab,
+   scrivi titolo, artista, BPM (c'è anche «Batti» per battere il tempo), durata, tag e nota, e vedi subito
+   l'anteprima come si leggerà in live (la conversione è quella dell'app web, compilata con esbuild:
+   `entry.ts` → `convert.bundle.js`). Poi due pulsanti:
+   - **Invia (Wi-Fi):** il brano va in una coda sul PC. In Backline, *tocca il nome del gruppo → Brani dal PC*,
+     scrivi una volta sola indirizzo e codice (li mostra la pagina) e tocca Scarica; l'app poi controlla da sola
+     a ogni apertura. Telefono e PC devono stare sulla stessa rete. La coda si legge solo con il codice.
+   - **Via cavo (adb):** il brano arriva subito, con il telefono collegato.
+   In entrambi i casi Backline chiede conferma prima di aggiungerlo.
 1. **Dal PC, in un comando.** Copia il tab sul PC (o salvalo in un `.txt`) e, con il tablet collegato via cavo:
    ```powershell
    .\tools\invia-brano.ps1                  # prende il testo dagli appunti

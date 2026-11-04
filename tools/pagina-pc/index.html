@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backline · Brani dal PC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pitch:#0E0D0B;--panel:#171512;--raise:#211E19;--line:#2E2A23;--outline:#3F392F;--amber:#FFB000;--on-amber:#1A1200;--ink:#EDE7DA;--dim:#A39A8B;--warn:#FF6B6B;--ok:#6FD08C;
+  --sans:"IBM Plex Sans Condensed","Segoe UI",system-ui,sans-serif;--mono:"IBM Plex Mono",Consolas,ui-monospace,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--pitch);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.4}
+header{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2}
+header b{color:var(--amber);letter-spacing:.2em;font-size:13px;text-transform:uppercase}
+header span{color:var(--dim)}
+#conn{margin-left:auto;font-size:14px;color:var(--dim)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;padding:24px;max-width:1400px;margin:0 auto}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+h2{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:18px}
+label{display:block;font-size:13px;color:var(--dim);margin-bottom:4px}
+input,textarea{width:100%;background:var(--pitch);color:var(--ink);border:1px solid var(--outline);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
+input:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:-1px;border-color:var(--amber)}
+textarea{font-family:var(--mono);font-size:14px;min-height:330px;resize:vertical;white-space:pre;overflow:auto;line-height:1.35}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.c2{grid-column:span 3}.c3{grid-column:span 2}.c6{grid-column:span 6}
+@media (max-width:560px){.c2,.c3{grid-column:span 6}}
+.hint{font-size:12px;color:var(--dim);margin-top:3px}
+button{font:inherit;cursor:pointer;border-radius:10px}
+.btn{background:none;color:var(--ink);border:1px solid var(--outline);padding:11px 16px;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.btn:hover{border-color:var(--amber)}
+.primary{background:var(--amber);color:var(--on-amber);border:0;font-size:15px;font-weight:700;padding:14px 20px}
+.primary:hover{filter:brightness(1.08)}
+.primary:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tap{display:flex;gap:8px}
+.tap input{flex:1}
+#msg{min-height:22px;font-size:14px}
+.ok{color:var(--ok)}.err{color:var(--warn)}
+/* anteprima: come si legge in live */
+#prev{background:var(--pitch);border-radius:10px;padding:16px 18px;max-height:560px;overflow:auto;font-size:19px;font-weight:500}
+.sec{font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:16px 0 6px}
+.ln{margin:0 0 6px;display:flex;flex-wrap:wrap;align-items:flex-end}
+.s{display:inline-flex;flex-direction:column;white-space:pre}
+.s i{font-style:normal;font-family:var(--mono);font-weight:600;font-size:17px;color:var(--amber);min-height:1.35em;padding-right:6px}
+.tab{font-family:var(--mono);font-size:12.5px;white-space:pre;margin:0;line-height:1.3}
+.blank{height:8px}
+.empty{color:var(--dim);font-size:15px}
+.q{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:0}
+.q b{font-weight:600}.q span{color:var(--dim);font-size:14px}
+.q button{margin-left:auto;background:none;border:0;color:var(--dim);font-size:20px;padding:2px 8px}
+.q button:hover{color:var(--warn)}
+code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radius:6px;color:var(--amber)}
+.steps{color:var(--dim);font-size:14px;padding-left:18px}
+.steps li{margin:3px 0}
+</style>
+</head>
+<body>
+<header><b>Backline</b><span>Brani dal PC</span><div id="conn">…</div></header>
+
+<main>
+  <div class="stack">
+    <div class="card">
+      <h2>Il testo</h2>
+      <textarea id="raw" spellcheck="false" placeholder="Incolla qui il tab: gli accordi sopra le parole, come lo trovi sul sito. Va bene anche un ChordPro."></textarea>
+      <div class="hint">La riga «Tuning / Key / Capo» dei siti di tab imposta da sola tonalità e capotasto. Gli accordi possono essere anche in Do Re Mi.</div>
+    </div>
+
+    <div class="card">
+      <h2>I dati del brano</h2>
+      <div class="grid">
+        <div class="c3"><label for="f-title">Titolo *</label><input id="f-title" autocomplete="off"></div>
+        <div class="c3"><label for="f-artist">Artista</label><input id="f-artist" autocomplete="off"></div>
+        <div class="c2"><label for="f-key">Tonalità</label><input id="f-key" placeholder="Am, Do, F#m…" autocomplete="off"></div>
+        <div class="c2"><label for="f-bpm">BPM</label>
+          <div class="tap"><input id="f-bpm" inputmode="numeric" autocomplete="off"><button class="btn" id="tap" type="button" title="Batti il tempo toccando più volte">Batti</button></div></div>
+        <div class="c2"><label for="f-dur">Durata</label><input id="f-dur" placeholder="3:40" autocomplete="off"></div>
+        <div class="c2"><label for="f-capo">Capotasto</label><input id="f-capo" inputmode="numeric" value="0" autocomplete="off"></div>
+        <div class="c2"><label for="f-lead">Attesa (s)</label><input id="f-lead" inputmode="numeric" value="0" autocomplete="off"><div class="hint">prima dello scorrimento</div></div>
+        <div class="c2"><label for="f-tags">Tag</label><input id="f-tags" placeholder="cover, lenta" autocomplete="off"></div>
+        <div class="c6"><label for="f-note">Nota per tutta la band</label><input id="f-note" placeholder="es. Attacco secco, senza conteggio" autocomplete="off"></div>
+        <div class="c6"><label style="display:flex;gap:8px;align-items:center;margin:0;color:var(--ink)"><input type="checkbox" id="f-inset" checked style="width:auto"> Metti anche in coda alla scaletta in uso</label></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <h2>Così si leggerà</h2>
+      <div id="stat" class="hint" style="margin:0 0 8px"></div>
+      <div id="prev"><div class="empty">L'anteprima compare appena incolli il testo.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Invia al telefono</h2>
+      <div class="row">
+        <button class="primary" id="send" type="button">Invia (Wi-Fi)</button>
+        <button class="btn" id="cable" type="button">Via cavo (adb)</button>
+        <button class="btn" id="clear" type="button">Nuovo brano</button>
+      </div>
+      <div id="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>In coda per il telefono <span id="qn"></span></h2>
+      <div id="queue"><div class="empty">Niente in coda.</div></div>
+      <ol class="steps" style="margin-top:12px">
+        <li>Su Backline: <b>tocca il nome del gruppo → Brani dal PC</b>.</li>
+        <li>Indirizzo <code id="addr">…</code> e codice <code id="code">…</code> (una volta sola).</li>
+        <li>Tocca <b>Scarica</b>: i brani arrivano, e Backline li controlla ogni volta che si apre.</li>
+      </ol>
+    </div>
+  </div>
+</main>
+
+<script src="convert.bundle.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var F = ['title', 'artist', 'key', 'bpm', 'dur', 'capo', 'lead', 'tags', 'note'];
+  var touched = {};
+  var body = '';
+
+  F.forEach(function (n) { $('f-' + n).addEventListener('input', function () { touched[n] = true; }); });
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function setIfFree(n, v) { if (!touched[n] && v !== undefined && v !== null && v !== '') $('f-' + n).value = v; }
+
+  // la testata dei siti di tab e le direttive ChordPro: dati, non musica
+  function readHeader(text) {
+    var meta = {};
+    var keep = [];
+    text.replace(/\r\n?/g, '\n').split('\n').forEach(function (l) {
+      if (/^\s*(Tuning|Key|Capo)\s*:/i.test(l)) {
+        var k = /Key:\s*([A-G][#b]?m?)/.exec(l); if (k && !meta.key) meta.key = k[1];
+        var c = /Capo:\s*(\d{1,2})/.exec(l); if (c && !meta.capo) meta.capo = c[1];
+        return;
+      }
+      var d = /^\s*\{\s*(title|t|artist|subtitle|st|key|capo)\s*:\s*([^}]*)\}\s*$/i.exec(l);
+      if (d) {
+        var n = d[1].toLowerCase(), v = d[2].trim();
+        if ((n === 'title' || n === 't') && !meta.title) meta.title = v;
+        else if ((n === 'artist' || n === 'subtitle' || n === 'st') && !meta.artist) meta.artist = v;
+        else if (n === 'key' && !meta.key) meta.key = v;
+        else if (n === 'capo' && !meta.capo) meta.capo = v;
+        return;
+      }
+      keep.push(l);
+    });
+    return { meta: meta, text: keep.join('\n') };
+  }
+
+  function isTab(l) { return /^\s*[A-Ga-g][#b]?\|.*-.*$/.test(l); }
+
+  function render(cp) {
+    if (!cp.trim()) return '<div class="empty">L\'anteprima compare appena incolli il testo.</div>';
+    return cp.split('\n').map(function (line) {
+      if (!line.trim()) return '<div class="blank"></div>';
+      if (/^\s*#/.test(line)) return '<div class="sec">' + esc(line.replace(/^\s*#\s?/, '')) + '</div>';
+      if (isTab(line)) return '<pre class="tab">' + esc(line.replace(/\s+$/, '')) + '</pre>';
+      var parts = line.split(/\[([^\]]+)\]/);              // testo, accordo, testo, accordo…
+      var out = '<div class="ln">';
+      if (parts[0]) out += '<span class="s"><i>&nbsp;</i><span>' + esc(parts[0]) + '</span></span>';
+      for (var j = 1; j < parts.length; j += 2) {
+        out += '<span class="s"><i>' + esc(parts[j]) + '</i><span>' + (esc(parts[j + 1] || '') || '&nbsp;') + '</span></span>';
+      }
+      return out + '</div>';
+    }).join('');
+  }
+
+  function update() {
+    var raw = $('raw').value;
+    var h = readHeader(raw);
+    setIfFree('key', h.meta.key); setIfFree('capo', h.meta.capo);
+    setIfFree('title', h.meta.title); setIfFree('artist', h.meta.artist);
+    body = raw.trim() ? BL.normalizeBody(BL.tabToChordPro(h.text)) : '';
+    $('prev').innerHTML = render(body);
+    var chords = (body.match(/\[[^\]]+\]/g) || []).length;
+    var sections = (body.match(/^#/mg) || []).length;
+    $('stat').textContent = !raw.trim() ? '' : chords === 0
+      ? 'Non trovo accordi: devono stare su righe a parte, sopra il testo.'
+      : chords + ' accordi · ' + sections + ' sezioni';
+    $('stat').className = 'hint' + (raw.trim() && chords === 0 ? ' err' : '');
+  }
+  $('raw').addEventListener('input', update);
+
+  // batti il tempo: più tocchi, media degli ultimi intervalli
+  var taps = [];
+  $('tap').addEventListener('click', function () {
+    var now = Date.now();
+    if (taps.length && now - taps[taps.length - 1] > 2500) taps = [];
+    taps.push(now); if (taps.length > 9) taps.shift();
+    if (taps.length >= 3) {
+      var avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+      $('f-bpm').value = Math.round(60000 / avg); touched.bpm = true;
+    }
+  });
+
+  function msg(text, cls) { $('msg').textContent = text; $('msg').className = cls || ''; }
+
+  function buildSong() {
+    var title = $('f-title').value.trim();
+    if (!title) { msg('Manca il titolo.', 'err'); $('f-title').focus(); return null; }
+    if (!/\[[^\]]+\]/.test(body)) { msg('Nel testo non ci sono accordi: controlla l\'anteprima.', 'err'); return null; }
+    var dur = $('f-dur').value.trim();
+    if (dur && !/^\d{1,2}:\d{2}$/.test(dur)) { msg('La durata va scritta così: 3:40.', 'err'); $('f-dur').focus(); return null; }
+    var note = $('f-note').value.trim();
+    return {
+      title: title, artist: $('f-artist').value.trim(), key: BL.toEnglish($('f-key').value.trim()),
+      bpm: parseInt($('f-bpm').value, 10) || null, dur: dur,
+      capo: parseInt($('f-capo').value, 10) || 0, lead: parseInt($('f-lead').value, 10) || 0,
+      tags: $('f-tags').value.split(',').map(function (t) { return t.trim(); }).filter(Boolean),
+      notes: note ? { Tutti: note } : {}, body: body, inSet: $('f-inset').checked
+    };
+  }
+
+  function post(url, data) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+
+  function reset() {
+    $('raw').value = ''; touched = {};
+    F.forEach(function (n) { $('f-' + n).value = (n === 'capo' || n === 'lead') ? '0' : ''; });
+    update(); $('raw').focus();
+  }
+
+  function send(url, label) {
+    var s = buildSong(); if (!s) return;
+    msg('Invio…');
+    post(url, { songs: [s] }).then(function (r) {
+      if (r.ok) { msg(label(s), 'ok'); reset(); refresh(); }
+      else msg((r.j && (r.j.message || r.j.error)) || 'Errore', 'err');
+    }).catch(function () { msg('Il server del PC non risponde: è ancora aperto?', 'err'); });
+  }
+  $('send').addEventListener('click', function () {
+    send('/api/queue', function (s) { return '«' + s.title + '» è in coda. Sul telefono tocca Scarica.'; });
+  });
+  $('cable').addEventListener('click', function () {
+    send('/api/adb-send', function (s) { return '«' + s.title + '» inviato: guarda il telefono.'; });
+  });
+  $('clear').addEventListener('click', function () { reset(); msg(''); });
+
+  function refresh() {
+    fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
+      $('addr').textContent = s.ip + ':' + s.port; $('code').textContent = s.code;
+      $('conn').textContent = s.adb === null ? 'adb non trovato'
+        : s.adb.length ? 'Telefono collegato via cavo ✓' : 'Nessun cavo collegato';
+      $('conn').style.color = s.adb && s.adb.length ? 'var(--ok)' : 'var(--dim)';
+      $('qn').textContent = s.queue.length ? '(' + s.queue.length + ')' : '';
+      $('queue').innerHTML = s.queue.length ? s.queue.map(function (e) {
+        return '<div class="q"><div><b>' + esc(e.title) + '</b> <span>' + esc(e.artist || '') + '</span></div>' +
+          '<button title="Toglila dalla coda" data-id="' + e.id + '">✕</button></div>';
+      }).join('') : '<div class="empty">Niente in coda.</div>';
+    }).catch(function () { $('conn').textContent = 'Server spento'; });
+  }
+  $('queue').addEventListener('click', function (ev) {
+    var id = ev.target.getAttribute && ev.target.getAttribute('data-id');
+    if (id) post('/api/queue/remove', { id: id }).then(refresh);
+  });
+
+  update(); refresh(); setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>
