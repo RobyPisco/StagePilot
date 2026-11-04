@@ -102,6 +102,65 @@ fun speedFor(scrollable: Float, durSecs: Int, factor: Double = 1.0, lead: Int = 
     return maxOf(1f, base * (if (factor > 0) factor.toFloat() else 1f))
 }
 
+/** La velocità in px/s secondo la base scelta. Con i BPM l'attesa iniziale non si sottrae: il tempo
+ *  stimato parte già dal primo accordo del chart, e `lead` serve solo a ritardare l'avvio. */
+fun speedFor(scrollable: Float, basis: Pair<SpeedBasis, Double>, factor: Double = 1.0, lead: Int = 0): Float =
+    when (basis.first) {
+        SpeedBasis.BPM -> {
+            if (!(scrollable > 0f)) 0f
+            else maxOf(1f, scrollable / maxOf(1.0, basis.second).toFloat() * (if (factor > 0) factor.toFloat() else 1f))
+        }
+        SpeedBasis.DURATION -> speedFor(scrollable, basis.second.toInt(), factor, lead)
+        SpeedBasis.FIXED -> speedFor(scrollable, 0, factor, lead)
+    }
+
+/** Da dove viene la velocità di base: dai BPM (la musica), dalla durata (il brano intero) o da niente. */
+enum class SpeedBasis { BPM, DURATION, FIXED }
+
+/** Quanto "dura" il chart nella musica, dai BPM: si contano le battute scritte e si moltiplica per la
+ *  durata di una battuta (a 4/4, 240 ÷ BPM secondi). Una riga di soli accordi vale un accordo per battuta;
+ *  una riga cantata ne vale almeno due. È una stima: chi legge corregge con la velocità ×… sul brano.
+ *  Restituisce null senza BPM o senza accordi su cui contare. */
+fun estimateChartSeconds(body: String?, bpm: Int?): Double? {
+    if (bpm == null || bpm <= 0) return null
+    var bars = 0
+    for (raw in (body ?: "").split("\n")) {
+        val line = raw.trimEnd('\r')
+        if (line.isBlank() || line.trim().startsWith("#")) continue
+        val parts = segs(line)
+        val chords = parts.count { !it.c.isNullOrEmpty() }
+        val sung = parts.any { it.t.isNotBlank() }
+        bars += when {
+            chords == 0 -> if (sung) 2 else 0
+            sung -> maxOf(chords, 2)
+            else -> chords
+        }
+    }
+    if (bars == 0) return null
+    return bars * 240.0 / bpm
+}
+
+/** La base della velocità e i secondi su cui distribuire lo scorrimento. */
+fun speedBasis(body: String?, bpm: Int?, durSecs: Int): Pair<SpeedBasis, Double> {
+    estimateChartSeconds(body, bpm)?.let { return SpeedBasis.BPM to it }
+    if (durSecs > 0) return SpeedBasis.DURATION to durSecs.toDouble()
+    return SpeedBasis.FIXED to 0.0
+}
+
+/** I gradini della velocità di scorrimento. Il passo da 0,1 non basta: la velocità di base fa
+ *  finire il chart insieme al brano, ma un chart scritto è quasi sempre più corto della
+ *  canzone (i ritornelli non sono riscritti), quindi serve poter andare molto più veloci. */
+val SPEED_STEPS = listOf(0.25, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0)
+
+/** Il gradino successivo (+1) o precedente (-1), partendo dal più vicino al valore attuale. */
+fun stepSpeed(current: Double, dir: Int): Double {
+    val nearest = SPEED_STEPS.indices.minByOrNull { kotlin.math.abs(SPEED_STEPS[it] - current) } ?: 6
+    return SPEED_STEPS[(nearest + dir).coerceIn(0, SPEED_STEPS.lastIndex)]
+}
+
+/** 1.0 → "1", 1.5 → "1.5", 0.25 → "0.25". */
+fun speedLabel(v: Double): String = String.format(java.util.Locale.ROOT, "%.2f", v).trimEnd('0').trimEnd('.')
+
 /** Numerazione: contano solo i brani, i segnaposto prendono 0. "02" deve voler
  *  dire il secondo pezzo, che è quello che si conta sul palco. */
 fun ordinals(entries: List<Entry>): List<Int> {

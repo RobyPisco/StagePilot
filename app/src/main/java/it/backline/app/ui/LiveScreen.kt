@@ -59,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import it.backline.app.core.SheetLine
 import it.backline.app.core.SheetOpts
+import it.backline.app.core.SpeedBasis
+import it.backline.app.core.speedBasis
 import it.backline.app.core.flatFor
 import it.backline.app.core.keyLabel
 import it.backline.app.core.mmss
@@ -68,6 +70,8 @@ import it.backline.app.core.renderSheet
 import it.backline.app.core.roman
 import it.backline.app.core.secs
 import it.backline.app.core.speedFor
+import it.backline.app.core.speedLabel
+import it.backline.app.core.stepSpeed
 import it.backline.app.core.transpose
 import it.backline.app.data.DB
 import it.backline.app.data.Entry
@@ -116,18 +120,28 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     LaunchedEffect(index) { scroll.scrollTo(0) }
 
     // scorrimento automatico: il chart arriva in fondo quando finisce il brano
+    // il brano com'è adesso: la velocità si può cambiare mentre scorre e deve valere subito,
+    // non alla prossima pressione di Play
+    val currentEntry by androidx.compose.runtime.rememberUpdatedState(entry)
+    // base della velocità (BPM, durata o fissa): si calcola una volta per brano, non a ogni fotogramma
+    val liveSong = (entry as? Entry.Track)?.song
+    val basis = remember(liveSong?.body, liveSong?.bpm, liveSong?.dur) {
+        speedBasis(liveSong?.body, liveSong?.bpm, secs(liveSong?.dur))
+    }
+    val basisNow by androidx.compose.runtime.rememberUpdatedState(basis)
     LaunchedEffect(playing, index) {
-        val e = entries.getOrNull(index) as? Entry.Track ?: return@LaunchedEffect
+        val first = currentEntry as? Entry.Track ?: return@LaunchedEffect
         if (!playing) return@LaunchedEffect
-        delay(e.song.lead * 1000L)
+        delay(first.song.lead * 1000L)
         var last = androidx.compose.runtime.withFrameNanos { it }
         var carry = 0f
         while (playing) {
             val now = androidx.compose.runtime.withFrameNanos { it }
             val dt = (now - last) / 1_000_000_000f
             last = now
+            val song = (currentEntry as? Entry.Track)?.song ?: break
             if (scroll.maxValue > 0 && scroll.value >= scroll.maxValue) { playing = false; break }
-            carry += speedFor(scroll.maxValue.toFloat(), secs(e.song.dur), e.song.scroll, e.song.lead) * dt
+            carry += speedFor(scroll.maxValue.toFloat(), basisNow, song.scroll, song.lead) * dt
             val px = carry.toInt()
             if (px > 0) { scroll.scrollBy(px.toFloat()); carry -= px }
         }
@@ -303,13 +317,23 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text("Scorrimento", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                ToolButton("−") { store.updateSong(s.id) { it.copy(scroll = (Math.round((it.scroll - 0.1) * 10) / 10.0).coerceIn(0.5, 4.0)) } }
+                Column(Modifier.weight(1f)) {
+                    Text("Scorrimento", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                    Text(
+                        when (basis.first) {
+                            SpeedBasis.BPM -> "base dai BPM (${s.bpm}, 4/4)"
+                            SpeedBasis.DURATION -> "base dalla durata del brano"
+                            SpeedBasis.FIXED -> "nessun BPM né durata: fissa"
+                        },
+                        color = Palco.Dim, fontFamily = Condensed, fontSize = 11.sp,
+                    )
+                }
+                ToolButton("−") { store.updateSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, -1)) } }
                 Text(
-                    "×" + String.format(java.util.Locale.ROOT, "%.1f", s.scroll), color = Palco.Ink, fontFamily = Mono,
-                    fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.width(46.dp),
+                    "×" + speedLabel(s.scroll), color = Palco.Ink, fontFamily = Mono,
+                    fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.width(54.dp),
                 )
-                ToolButton("+") { store.updateSong(s.id) { it.copy(scroll = (Math.round((it.scroll + 0.1) * 10) / 10.0).coerceIn(0.5, 4.0)) } }
+                ToolButton("+") { store.updateSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, +1)) } }
             }
         }
 

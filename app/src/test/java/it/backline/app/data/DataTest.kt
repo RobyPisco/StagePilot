@@ -52,7 +52,7 @@ class DataTest {
         assertEquals(1, ok.bands[0].sets.size)
         assertEquals(ok.bands[0].sets[0].id, ok.bands[0].cur)
         val s = ok.bands[0].songs[0]
-        assertEquals(11, s.tr); assertEquals(0, s.capo); assertEquals(4.0, s.scroll, 0.0); assertEquals(60, s.lead)
+        assertEquals(11, s.tr); assertEquals(0, s.capo); assertEquals(12.0, s.scroll, 0.0); assertEquals(60, s.lead)
         assertEquals("en", ok.opt.notation); assertEquals("auto", ok.opt.accid); assertEquals(48, ok.opt.fs)
     }
 

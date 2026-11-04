@@ -4,6 +4,7 @@ import it.backline.app.data.Entry
 import it.backline.app.data.Song
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,6 +84,47 @@ class CoreTest {
         assertEquals(10f, speedFor(1000f, 108, 1.0, 8), 0.001f)
         assertEquals(0f, speedFor(0f, 100), 0f)
         assertEquals(20f, speedFor(1000f, 0), 0.001f)
+    }
+
+    @Test fun chartLengthFromBpm() {
+        // 4 accordi su una riga di soli accordi = 4 battute; a 120 BPM una battuta dura 2 secondi
+        assertEquals(8.0, estimateChartSeconds("[Am] [F] [C] [G]", 120)!!, 0.001)
+        // una riga cantata con un solo accordo vale due battute
+        assertEquals(4.0, estimateChartSeconds("[Am]Ciao a tutti", 120)!!, 0.001)
+        // con tre accordi vale tre battute; sezioni e righe vuote non contano
+        assertEquals(6.0, estimateChartSeconds("# Strofa\n\n[Am]Ciao [F]a [C]tutti", 120)!!, 0.001)
+        // senza BPM o senza accordi non si può stimare
+        assertNull(estimateChartSeconds("[Am]Ciao", null))
+        assertNull(estimateChartSeconds("[Am]Ciao", 0))
+        assertNull(estimateChartSeconds("# solo sezione", 120))
+        // più veloce il brano, più corto il chart nel tempo
+        assertTrue(estimateChartSeconds("[Am]Ciao", 200)!! < estimateChartSeconds("[Am]Ciao", 60)!!)
+    }
+
+    @Test fun speedBasisPrefersBpmThenDuration() {
+        assertEquals(SpeedBasis.BPM, speedBasis("[Am]Ciao", 120, 200).first)
+        assertEquals(SpeedBasis.DURATION, speedBasis("[Am]Ciao", null, 200).first)
+        assertEquals(SpeedBasis.FIXED, speedBasis("[Am]Ciao", null, 0).first)
+        // dai BPM: 1000 px da percorrere in 4 s di chart = 250 px/s; la correzione la moltiplica
+        assertEquals(250f, speedFor(1000f, SpeedBasis.BPM to 4.0), 0.01f)
+        assertEquals(500f, speedFor(1000f, SpeedBasis.BPM to 4.0, factor = 2.0), 0.01f)
+        // dai BPM l'attesa iniziale non si sottrae
+        assertEquals(250f, speedFor(1000f, SpeedBasis.BPM to 4.0, lead = 3), 0.01f)
+        // dalla durata sì, come prima
+        assertEquals(10f, speedFor(1000f, SpeedBasis.DURATION to 108.0, lead = 8), 0.01f)
+    }
+
+    @Test fun speedStepsGoUpAndDownAndStayInRange() {
+        assertEquals(1.2, stepSpeed(1.0, +1), 0.0)
+        assertEquals(0.9, stepSpeed(1.0, -1), 0.0)
+        assertEquals(12.0, stepSpeed(12.0, +1), 0.0)
+        assertEquals(0.25, stepSpeed(0.25, -1), 0.0)
+        // un valore salvato fuori dai gradini (da un backup web) riparte dal più vicino
+        assertEquals(1.5, stepSpeed(1.3, +1), 0.0)
+        assertEquals("1", speedLabel(1.0))
+        assertEquals("1.5", speedLabel(1.5))
+        assertEquals("0.25", speedLabel(0.25))
+        assertEquals("12", speedLabel(12.0))
     }
 
     @Test fun durationsAndOrdinals() {

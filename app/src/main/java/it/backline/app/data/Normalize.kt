@@ -13,7 +13,7 @@ fun normalizeSong(s: Song): Song = s.copy(
     tags = s.tags.flatMap { parseTags(it) }.distinct(),
     tr = clampInt(s.tr, -11, 11),
     capo = clampInt(s.capo, 0, 11),
-    scroll = if (s.scroll.isFinite()) s.scroll.coerceIn(0.5, 4.0) else 1.0,
+    scroll = if (s.scroll.isFinite()) s.scroll.coerceIn(0.25, 12.0) else 1.0,
     lead = clampInt(s.lead, 0, 60),
     notes = s.notes.filterValues { it.isNotBlank() },
 )
