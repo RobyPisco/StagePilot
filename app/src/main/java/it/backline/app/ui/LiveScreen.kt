@@ -1,0 +1,388 @@
+package it.backline.app.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import it.backline.app.core.SheetLine
+import it.backline.app.core.SheetOpts
+import it.backline.app.core.flatFor
+import it.backline.app.core.keyLabel
+import it.backline.app.core.mmss
+import it.backline.app.core.notesFor
+import it.backline.app.core.ordinals
+import it.backline.app.core.renderSheet
+import it.backline.app.core.roman
+import it.backline.app.core.secs
+import it.backline.app.core.speedFor
+import it.backline.app.core.transpose
+import it.backline.app.data.DB
+import it.backline.app.data.Entry
+import it.backline.app.data.Store
+import it.backline.app.data.entries
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/* La vista live: schermo pieno, testo scalabile, sei comandi grandi sempre a
+   portata. Lo schermo non si spegne finché è aperta. */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
+    val band = db.band
+    val opt = db.opt
+    val entries = band.entries()
+    if (entries.isEmpty()) { onClose(); return }
+    val ord = ordinals(entries)
+
+    var index by rememberSaveable { mutableIntStateOf(startIndex.coerceIn(0, entries.lastIndex)) }
+    var playing by remember { mutableStateOf(false) }
+    var locked by remember { mutableStateOf(false) }
+    var struct by remember { mutableStateOf(false) }
+    var elapsed by remember { mutableIntStateOf(0) }
+    val scroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val entry = entries[index.coerceIn(0, entries.lastIndex)]
+    val next = entries.getOrNull(index + 1)
+
+    // lo schermo resta acceso per tutta la durata del set
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+    BackHandler(onBack = onClose)
+
+    // cronometro del set
+    LaunchedEffect(Unit) { while (true) { delay(1000); elapsed++ } }
+
+    fun go(delta: Int) {
+        val n = index + delta
+        if (n in entries.indices) { playing = false; index = n }
+    }
+    LaunchedEffect(index) { scroll.scrollTo(0) }
+
+    // scorrimento automatico: il chart arriva in fondo quando finisce il brano
+    LaunchedEffect(playing, index) {
+        val e = entries.getOrNull(index) as? Entry.Track ?: return@LaunchedEffect
+        if (!playing) return@LaunchedEffect
+        delay(e.song.lead * 1000L)
+        var last = androidx.compose.runtime.withFrameNanos { it }
+        var carry = 0f
+        while (playing) {
+            val now = androidx.compose.runtime.withFrameNanos { it }
+            val dt = (now - last) / 1_000_000_000f
+            last = now
+            if (scroll.maxValue > 0 && scroll.value >= scroll.maxValue) { playing = false; break }
+            carry += speedFor(scroll.maxValue.toFloat(), secs(e.song.dur), e.song.scroll, e.song.lead) * dt
+            val px = carry.toInt()
+            if (px > 0) { scroll.scrollBy(px.toFloat()); carry -= px }
+        }
+    }
+
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+
+    Column(
+        Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding()
+            .focusRequester(focus).focusable()
+            .onPreviewKeyEvent { ev ->
+                // girapagine Bluetooth e tastiere: stessi tasti dell'app web
+                if (ev.type != KeyEventType.KeyDown) false else when (ev.key) {
+                    Key.DirectionRight, Key.PageDown -> { go(1); true }
+                    Key.DirectionLeft, Key.PageUp -> { go(-1); true }
+                    Key.Spacebar -> { playing = !playing; true }
+                    Key.Escape -> { onClose(); true }
+                    else -> false
+                }
+            },
+    ) {
+        // testata
+        Row(
+            Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 6.dp, end = 14.dp, top = 8.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                Icon(Ic.Back, "Torna alla scaletta", tint = Palco.Dim, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                when (entry) {
+                    is Entry.Track -> {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                ord[index].toString().padStart(2, '0'), color = Palco.Amber, fontFamily = Mono,
+                                fontWeight = FontWeight.SemiBold, fontSize = 18.sp,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                entry.song.title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                                fontSize = 23.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        val sub = listOfNotNull(
+                            entry.song.artist.takeIf { it.isNotBlank() },
+                            entry.song.bpm?.let { "$it BPM" },
+                            if (opt.timer) mmss(elapsed) else null,
+                        ).joinToString("  ·  ")
+                        Text(sub, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp, maxLines = 1)
+                    }
+                    is Entry.Mark -> {
+                        Text(
+                            entry.label, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                            fontSize = 23.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        if (opt.timer) Text(mmss(elapsed), color = Palco.Dim, fontFamily = Mono, fontSize = 13.sp)
+                    }
+                }
+            }
+            if (entry is Entry.Track) {
+                val k = keyLabel(entry.song, opt.notation, opt.accid)
+                if (k.isNotEmpty()) Text(
+                    k, color = Palco.OnAmber, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 22.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Palco.Amber).padding(horizontal = 14.dp, vertical = 6.dp),
+                )
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+
+        // chart
+        Box(
+            Modifier.weight(1f).fillMaxWidth()
+                .then(if (locked) Modifier.border(3.dp, Palco.Amber) else Modifier),
+        ) {
+            when (entry) {
+                is Entry.Mark -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        entry.label, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                        fontSize = 56.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp),
+                    )
+                }
+                is Entry.Track -> {
+                    val song = entry.song
+                    val keyShown = transpose(song.key, song.tr)
+                    val lines = remember(song.body, song.tr, struct, opt.notation, opt.accid, opt.roots, opt.plain) {
+                        renderSheet(
+                            song.body,
+                            SheetOpts(
+                                tr = song.tr, struct = struct, ital = opt.italian,
+                                flat = flatFor(keyShown, opt.accid), roots = opt.roots, plain = opt.plain,
+                            ),
+                        )
+                    }
+                    val notes = notesFor(song.notes, band.me)
+                    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 40.dp)) {
+                        if (song.capo > 0) Text(
+                            "CAPO ${roman(song.capo)}", color = Palco.OnAmber, fontFamily = Mono,
+                            fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 10.dp).clip(RoundedCornerShape(6.dp)).background(Palco.Amber)
+                                .padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                        notes.forEach { (who, txt) ->
+                            Column(
+                                Modifier.padding(bottom = 10.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                                    .background(Palco.Panel).padding(12.dp),
+                            ) {
+                                Text(who.uppercase(), color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.6.sp)
+                                Text(txt, color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp)
+                            }
+                        }
+                        lines.forEach { l -> SheetLineView(l, opt.fs) }
+                    }
+                }
+            }
+            // blocco touch: una manata sullo schermo non fa più niente
+            if (locked) Box(
+                Modifier.matchParentSize().pointerInput(Unit) {
+                    awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
+                },
+            )
+        }
+
+        // prossimo
+        Row(
+            Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 18.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Prossimo  ", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+            Text(
+                when (next) { is Entry.Track -> next.song.title; is Entry.Mark -> next.label; null -> "Fine scaletta" },
+                color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // trasposizione, notazione, corpo del testo
+        Row(
+            Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            val song = (entry as? Entry.Track)?.song
+            ToolButton("−", enabled = song != null) { song?.let { s -> store.updateSong(s.id) { it.copy(tr = (it.tr - 1).coerceIn(-11, 11)) } } }
+            Text(
+                (song?.tr ?: 0).let { if (it > 0) "+$it" else "$it" }, color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.width(30.dp),
+            )
+            ToolButton("+", enabled = song != null) { song?.let { s -> store.updateSong(s.id) { it.copy(tr = (it.tr + 1).coerceIn(-11, 11)) } } }
+            Spacer(Modifier.weight(1f))
+            ToolButton("Do Re Mi", active = opt.italian) { store.updateOptions { it.copy(notation = if (it.notation == "it") "en" else "it") } }
+            ToolButton("A−") { store.updateOptions { it.copy(fs = (it.fs - 2).coerceIn(14, 48)) } }
+            ToolButton("A+") { store.updateOptions { it.copy(fs = (it.fs + 2).coerceIn(14, 48)) } }
+        }
+
+        // velocità dello scorrimento, salvata sul brano: si registra una volta in prova
+        (entry as? Entry.Track)?.song?.let { s ->
+            Row(
+                Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 18.dp, end = 12.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Scorrimento", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                ToolButton("−") { store.updateSong(s.id) { it.copy(scroll = (Math.round((it.scroll - 0.1) * 10) / 10.0).coerceIn(0.5, 4.0)) } }
+                Text(
+                    "×" + String.format(java.util.Locale.ROOT, "%.1f", s.scroll), color = Palco.Ink, fontFamily = Mono,
+                    fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.width(46.dp),
+                )
+                ToolButton("+") { store.updateSong(s.id) { it.copy(scroll = (Math.round((it.scroll + 0.1) * 10) / 10.0).coerceIn(0.5, 4.0)) } }
+            }
+        }
+
+        // i sei comandi
+        if (opt.bar) Row(
+            Modifier.fillMaxWidth().background(Palco.Raise),
+        ) {
+            Control(Ic.Prev, "Prec") { go(-1) }
+            Control(if (playing) Ic.Pause else Ic.Play, if (playing) "Pausa" else "Play", primary = true, active = playing) {
+                if (entry is Entry.Track) playing = !playing
+            }
+            Control(Ic.Stop, "Stop") { playing = false; scope.launch { scroll.animateScrollTo(0) } }
+            Control(Ic.Next, "Succ") { go(1) }
+            Control(Ic.Struct, "Strut", active = struct) { struct = !struct }
+            Control(Ic.Lock, "Blocca", active = locked, alwaysOn = true) { locked = !locked }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SheetLineView(line: SheetLine, fs: Int) {
+    when (line) {
+        SheetLine.Blank -> Spacer(Modifier.height((fs * 0.6f).dp))
+        is SheetLine.Section -> Text(
+            line.text.uppercase(), color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+            fontSize = 13.sp, letterSpacing = 2.4.sp, modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
+        )
+        is SheetLine.Lyric -> {
+            val anyChord = line.segs.any { it.chord.isNotEmpty() }
+            val anyText = line.segs.any { it.text.isNotEmpty() }
+            FlowRow(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+                line.segs.forEach { s ->
+                    Column {
+                        if (anyChord) Text(
+                            s.chord.ifEmpty { " " }, color = Palco.Amber, fontFamily = Mono, fontWeight = FontWeight.SemiBold,
+                            fontSize = (fs * 0.92f).sp, softWrap = false, modifier = Modifier.padding(end = 8.dp),
+                        )
+                        if (anyText) Text(
+                            s.text.ifEmpty { " " }, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Medium,
+                            fontSize = fs.sp, softWrap = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolButton(text: String, enabled: Boolean = true, active: Boolean = false, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Box(
+        Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp).clip(shape)
+            .then(if (active) Modifier.background(Palco.Amber) else Modifier.border(1.dp, Palco.Outline, shape))
+            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+            color = when { active -> Palco.OnAmber; enabled -> Palco.Ink; else -> Palco.Dim },
+        )
+    }
+}
+
+@Composable
+private fun RowScope.Control(
+    icon: ImageVector, label: String, primary: Boolean = false, active: Boolean = false,
+    alwaysOn: Boolean = false, onClick: () -> Unit,
+) {
+    val bg = when { primary && !active -> Palco.Amber; primary && active -> Palco.AmberDeep; else -> Palco.Raise }
+    val fg = when {
+        primary && !active -> Palco.OnAmber
+        primary && active -> Palco.Amber
+        active || alwaysOn && active -> Palco.Amber
+        else -> Palco.Ink
+    }
+    Column(
+        Modifier.weight(1f).height(76.dp).background(bg).clickable(onClick = onClick).padding(top = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(icon, label, tint = fg, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label.uppercase(), color = if (primary) fg else Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp, letterSpacing = 1.1.sp,
+        )
+    }
+}

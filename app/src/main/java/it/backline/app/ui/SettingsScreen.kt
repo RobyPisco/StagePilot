@@ -1,0 +1,222 @@
+package it.backline.app.ui
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import it.backline.app.data.DB
+import it.backline.app.data.ROLES
+import it.backline.app.data.Store
+
+/* Gruppo, scalette, modo di leggere e backup: tutto quello che non serve
+   sul palco sta qui, fuori dalla strada. */
+@Composable
+fun SettingsScreen(db: DB, store: Store, onClose: () -> Unit, onExport: () -> Unit, onImport: () -> Unit) {
+    val band = db.band
+    val opt = db.opt
+    var bandName by remember(band.id) { mutableStateOf(band.name) }
+
+    // dialoghi: quale è aperto e su cosa
+    var newBandDialog by remember { mutableStateOf(false) }
+    var newSetDialog by remember { mutableStateOf(false) }
+    var renameSet by remember { mutableStateOf<String?>(null) }
+    var deleteSet by remember { mutableStateOf<String?>(null) }
+    var deleteBand by remember { mutableStateOf(false) }
+
+    BackHandler(onBack = onClose)
+
+    Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
+            Row(
+                Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 6.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                    Icon(Ic.Back, "Indietro", tint = Palco.Dim, modifier = Modifier.size(22.dp))
+                }
+                Text(
+                    "Gruppo e impostazioni", color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp, modifier = Modifier.padding(start = 6.dp),
+                )
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+
+            Column(
+                Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // ── gruppo ──
+                Section("Gruppo")
+                if (db.bands.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    db.bands.forEach { b -> Chip(b.name, selected = b.id == band.id) { store.switchBand(b.id) } }
+                }
+                PalcoField(bandName, { bandName = it; if (it.isNotBlank()) store.renameBand(it) }, "Nome del gruppo")
+                Hint("Il tuo ruolo: decide quali note personali vedi in live.")
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ROLES.forEach { r -> Chip(r, selected = r == band.me) { store.setRole(r) } }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GhostButton("+ Nuovo gruppo") { newBandDialog = true }
+                    if (db.bands.size > 1) GhostButton("Elimina gruppo", danger = true) { deleteBand = true }
+                }
+
+                // ── scalette ──
+                Section("Scalette")
+                band.sets.forEach { s ->
+                    Column(Modifier.fillMaxWidth().background(Palco.Panel, RoundedCornerShape(12.dp)).padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                s.name, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp, modifier = Modifier.weight(1f),
+                            )
+                            if (s.id == band.curSet?.id) Text("IN USO", color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.4.sp)
+                        }
+                        Text("${s.items.size} ${if (s.items.size == 1) "voce" else "voci"}", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            GhostButton("Rinomina") { renameSet = s.id }
+                            GhostButton("Duplica") { store.duplicateSet(s.id) }
+                            if (band.sets.size > 1) GhostButton("Elimina", danger = true) { deleteSet = s.id }
+                        }
+                    }
+                }
+                GhostButton("+ Nuova scaletta") { newSetDialog = true }
+
+                // ── lettura ──
+                Section("Come si legge")
+                Hint("Notazione degli accordi")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("C D E", selected = !opt.italian) { store.updateOptions { it.copy(notation = "en") } }
+                    Chip("Do Re Mi", selected = opt.italian) { store.updateOptions { it.copy(notation = "it") } }
+                }
+                Hint("Alterazioni: automatiche scelgono dalla tonalità (Si♭ in Fa, La# in Mi)")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Automatiche", selected = opt.accid == "auto") { store.updateOptions { it.copy(accid = "auto") } }
+                    Chip("Diesis", selected = opt.accid == "sharp") { store.updateOptions { it.copy(accid = "sharp") } }
+                    Chip("Bemolli", selected = opt.accid == "flat") { store.updateOptions { it.copy(accid = "flat") } }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Corpo del testo in live: ${opt.fs}", color = Palco.Ink, fontFamily = Condensed,
+                        fontWeight = FontWeight.SemiBold, fontSize = 16.sp, modifier = Modifier.weight(1f),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Chip("A−", selected = false) { store.updateOptions { it.copy(fs = (it.fs - 2).coerceIn(14, 48)) } }
+                        Chip("A+", selected = false) { store.updateOptions { it.copy(fs = (it.fs + 2).coerceIn(14, 48)) } }
+                    }
+                }
+                Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
+                Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
+                Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
+                Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
+
+                // ── backup ──
+                Section("Backup")
+                Hint(
+                    "Il backup è un file JSON con tutti i gruppi, i brani e le scalette. È lo stesso formato dell'app web: " +
+                        "un backup di là si importa qui. Per condividere con la band basta mandare il file.",
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GhostButton("Esporta") { onExport() }
+                    GhostButton("Importa") { onImport() }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Text("Backline 0.1.0", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp)
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+
+    if (newBandDialog) NameDialog("Nuovo gruppo", "Nome del gruppo", "", "Crea", { newBandDialog = false }) {
+        store.newBand(it); newBandDialog = false
+    }
+    if (newSetDialog) NameDialog("Nuova scaletta", "Nome", "", "Crea", { newSetDialog = false }) {
+        store.newSet(it); newSetDialog = false
+    }
+    renameSet?.let { id ->
+        NameDialog("Rinomina la scaletta", "Nome", band.sets.firstOrNull { it.id == id }?.name ?: "", "Salva", { renameSet = null }) {
+            store.renameSet(id, it); renameSet = null
+        }
+    }
+    deleteSet?.let { id ->
+        PalcoDialog("Eliminare la scaletta?", "Elimina", { store.deleteSet(id); deleteSet = null }, { deleteSet = null }) {
+            Text(
+                "«${band.sets.firstOrNull { it.id == id }?.name}» sparisce. I brani restano nel repertorio.",
+                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+            )
+        }
+    }
+    if (deleteBand) PalcoDialog("Eliminare il gruppo?", "Elimina", { store.deleteBand(band.id); deleteBand = false }, { deleteBand = false }) {
+        Text(
+            "«${band.name}» sparisce con tutti i suoi brani e le sue scalette. Se vuoi tenerli, esporta prima un backup.",
+            color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+        )
+    }
+}
+
+@Composable
+private fun Section(text: String) {
+    Text(
+        text.uppercase(), color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+        fontSize = 12.sp, letterSpacing = 2.4.sp, modifier = Modifier.padding(top = 14.dp),
+    )
+}
+
+@Composable
+private fun Hint(text: String) {
+    Text(text, color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+}
+
+@Composable
+private fun Toggle(title: String, desc: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(desc, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp)
+        }
+        Switch(
+            checked = checked, onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Palco.OnAmber, checkedTrackColor = Palco.Amber,
+                uncheckedThumbColor = Palco.Dim, uncheckedTrackColor = Palco.Raise, uncheckedBorderColor = Palco.Outline,
+            ),
+        )
+    }
+}
+
+@Composable
+fun NameDialog(title: String, label: String, initial: String, confirm: String, onDismiss: () -> Unit, onOk: (String) -> Unit) {
+    var v by remember { mutableStateOf(initial) }
+    PalcoDialog(title, confirm, if (v.isNotBlank()) ({ onOk(v) }) else null, onDismiss) {
+        PalcoField(v, { v = it }, label)
+    }
+}

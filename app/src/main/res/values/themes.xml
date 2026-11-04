@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nero del palco anche prima che Compose disegni il primo frame -->
+    <style name="Theme.Backline" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/pitch</item>
+        <item name="android:statusBarColor">@color/pitch</item>
+        <item name="android:navigationBarColor">@color/pitch</item>
+    </style>
+</resources>
