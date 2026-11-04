@@ -3,6 +3,8 @@ package it.backline.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,9 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import it.backline.app.core.PC
 import it.backline.app.core.keyLabel
 import it.backline.app.core.mmss
 import it.backline.app.core.secs
+import it.backline.app.core.transpose
 import it.backline.app.data.DB
 
 /* Il repertorio: tutti i brani del gruppo, con ricerca. Toccare un brano apre
@@ -48,14 +52,22 @@ fun RepertoireScreen(
     onNewSong: () -> Unit,
     onImport: () -> Unit,
     onSettings: () -> Unit,
+    onSort: (String) -> Unit,
 ) {
     val band = db.band
     var query by rememberSaveable { mutableStateOf("") }
     val inSet = band.curSet?.items.orEmpty().filter { it.type == "song" }.mapNotNull { it.id }.toSet()
     val q = query.trim().lowercase()
-    val shown = band.songs.filter {
+    val found = band.songs.filter {
         q.isEmpty() || it.title.lowercase().contains(q) || it.artist.lowercase().contains(q) ||
             it.tags.any { t -> t.contains(q) }
+    }
+    val shown = when (db.opt.sort) {
+        "title" -> found.sortedBy { it.title.lowercase() }
+        "artist" -> found.sortedWith(compareBy({ it.artist.lowercase().ifEmpty { "￿" } }, { it.title.lowercase() }))
+        "key" -> found.sortedWith(compareBy({ it.key.isEmpty() }, { PC[transpose(it.key, it.tr).takeWhile { c -> c != 'm' }] ?: 99 }, { it.title.lowercase() }))
+        "bpm" -> found.sortedWith(compareBy({ it.bpm == null }, { it.bpm ?: 0 }, { it.title.lowercase() }))
+        else -> found
     }
 
     Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding(), contentAlignment = Alignment.TopCenter) {
@@ -68,8 +80,12 @@ fun RepertoireScreen(
                 PalcoField(query, { query = it }, "Cerca titolo, artista o tag")
                 Text(
                     "${shown.size} di ${band.songs.size} brani", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
                 )
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("add" to "Inserimento", "title" to "Titolo", "artist" to "Artista", "key" to "Tonalità", "bpm" to "BPM")
+                        .forEach { (id, label) -> Chip(label, selected = db.opt.sort == id) { onSort(id) } }
+                }
             }
 
             LazyColumn(Modifier.weight(1f)) {

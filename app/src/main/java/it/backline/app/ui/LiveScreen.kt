@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -90,6 +91,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     var playing by remember { mutableStateOf(false) }
     var locked by remember { mutableStateOf(false) }
     var struct by remember { mutableStateOf(false) }
+    var toolsOpen by rememberSaveable { mutableStateOf(false) }
     var elapsed by remember { mutableIntStateOf(0) }
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -250,21 +252,33 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             )
         }
 
-        // prossimo
+        // prossimo, e a destra la voce che apre le opzioni (trasposizione, notazione, testo, scorrimento):
+        // i comandi da provare in sala restano a un tocco, ma non rubano spazio al chart sul palco
         Row(
-            Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 18.dp, vertical = 9.dp),
+            Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Prossimo  ", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
             Text(
                 when (next) { is Entry.Track -> next.song.title; is Entry.Mark -> next.label; null -> "Fine scaletta" },
                 color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
+            Row(
+                Modifier.clickable { toolsOpen = !toolsOpen }.heightIn(min = 44.dp).padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "OPZIONI", color = if (toolsOpen) Palco.Amber else Palco.Dim, fontFamily = Condensed,
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.4.sp,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(if (toolsOpen) Ic.Chevron else Ic.Up, null, tint = if (toolsOpen) Palco.Amber else Palco.Dim, modifier = Modifier.size(14.dp))
+            }
         }
 
         // trasposizione, notazione, corpo del testo
-        Row(
+        if (toolsOpen) Row(
             Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -283,7 +297,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
         }
 
         // velocità dello scorrimento, salvata sul brano: si registra una volta in prova
-        (entry as? Entry.Track)?.song?.let { s ->
+        (entry as? Entry.Track)?.song?.takeIf { toolsOpen }?.let { s ->
             Row(
                 Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 18.dp, end = 12.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,

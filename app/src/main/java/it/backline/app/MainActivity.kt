@@ -163,6 +163,7 @@ private fun App(store: Store) {
             onNewSong = { editId = null; draft = null; newId = store.newId("s"); route = "edit" },
             onImport = { draft = null; newId = store.newId("s"); route = "import" },
             onSettings = { route = "settings" },
+            onSort = { s -> store.updateOptions { it.copy(sort = s) } },
         )
     }
 

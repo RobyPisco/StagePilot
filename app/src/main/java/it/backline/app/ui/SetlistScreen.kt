@@ -6,9 +6,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +58,10 @@ import it.backline.app.data.entries
 
 /* La scaletta: la prima schermata. Grafica Palco. In modalità Modifica le
    righe mostrano i comandi per spostare e togliere, e si possono aggiungere
-   brani e segnaposto. */
+   brani e segnaposto. In verticale tutto si impila; in orizzontale (tablet sul
+   leggio) titolo e comandi stanno a sinistra e la lista occupa tutta l'altezza
+   a destra, così in vista ci sono molti brani e non solo due. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SetlistScreen(
     db: DB,
@@ -73,113 +81,19 @@ fun SetlistScreen(
     val band = db.band
     val entries = band.entries()
     val ord = ordinals(entries)
-    val songs = entries.count { it is Entry.Track }
-    val marks = entries.size - songs
-    val mins = (setDuration(entries) + 30) / 60
 
     var pickSong by rememberSaveable { mutableStateOf(false) }
     var addMark by rememberSaveable { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding(), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
-            BrandBar(band.name, onSettings)
-            MainTabs(selected = 0, onSelect = onTab)
+    BoxWithConstraints(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding()) {
+        val wide = maxWidth > maxHeight && maxWidth >= 600.dp
 
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
-                Text(
-                    "SCALETTA", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp, letterSpacing = 2.sp,
-                )
-                Text(
-                    band.curSet?.name ?: "—", color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
-                    fontSize = 34.sp, lineHeight = 36.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
-                )
-                val parts = buildList {
-                    add("$songs ${if (songs == 1) "brano" else "brani"}")
-                    add("$mins min")
-                    if (marks > 0) add("$marks ${if (marks == 1) "pausa" else "pause"}")
-                }
-                Text(parts.joinToString("  ·  "), color = Palco.Dim, fontFamily = Mono, fontSize = 13.sp)
+        val list: @Composable (Modifier) -> Unit = { m ->
+            LazyColumn(m) {
+                itemsIndexed(entries) { i, e -> EntryRow(i, e, ord[i], editing, db, entries.lastIndex, onOpen, onMove, onRemove) }
             }
-
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Chip("Do Re Mi", selected = db.opt.italian, onClick = onToggleNotation)
-                band.sets.forEach { s -> Chip(s.name, selected = s.id == band.curSet?.id, onClick = { onPickSet(s.id) }) }
-                Chip("Modifica", selected = editing, onClick = onToggleEdit)
-                Chip("Condividi", selected = false, onClick = onShare)
-            }
-
-            if (editing) Row(
-                Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                GhostButton("+ Brano") { pickSong = true }
-                GhostButton("+ Segnaposto") { addMark = true }
-            }
-
-            LazyColumn(Modifier.weight(1f)) {
-                itemsIndexed(entries) { i, e ->
-                    when (e) {
-                        is Entry.Track -> Row(
-                            Modifier.fillMaxWidth().heightIn(min = 58.dp)
-                                .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
-                                .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp, top = 8.dp, bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            Text(
-                                ord[i].toString().padStart(2, '0'), color = Palco.Amber, fontFamily = Mono,
-                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.width(24.dp),
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    e.song.title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
-                                    fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                )
-                                val sub = listOfNotNull(
-                                    e.song.artist.takeIf { it.isNotBlank() },
-                                    e.song.bpm?.let { "$it BPM" },
-                                ).joinToString(" · ")
-                                if (sub.isNotEmpty()) Text(sub, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp)
-                            }
-                            if (editing) EditButtons(i, entries.lastIndex, onMove, onRemove) else {
-                                val k = keyLabel(e.song, db.opt.notation, db.opt.accid)
-                                if (k.isNotEmpty()) Text(
-                                    k, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.width(48.dp).border(1.dp, Palco.Outline, RoundedCornerShape(6.dp)).padding(vertical = 4.dp),
-                                )
-                                Text(
-                                    if (secs(e.song.dur) > 0) mmss(secs(e.song.dur)) else "", color = Palco.Dim,
-                                    fontFamily = Mono, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp),
-                                )
-                            }
-                        }
-                        is Entry.Mark -> Row(
-                            Modifier.fillMaxWidth().heightIn(min = 50.dp).background(Palco.Panel)
-                                .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
-                                .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            Text("—", color = Palco.Dim, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.width(24.dp))
-                            Text(
-                                e.label, color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Medium,
-                                fontStyle = FontStyle.Italic, fontSize = 19.sp, modifier = Modifier.weight(1f),
-                            )
-                            if (editing) EditButtons(i, entries.lastIndex, onMove, onRemove) else Text(
-                                if (secs(e.dur) > 0) mmss(secs(e.dur)) else "", color = Palco.Dim, fontFamily = Mono,
-                                fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(44.dp),
-                            )
-                        }
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
-                }
-            }
-
+        }
+        val start: @Composable () -> Unit = {
             Box(Modifier.fillMaxWidth().background(Palco.Pitch).padding(horizontal = 20.dp, vertical = 14.dp)) {
                 if (editing) AmberButton("Fatto", onClick = onToggleEdit)
                 else Row(
@@ -196,6 +110,37 @@ fun SetlistScreen(
                         fontSize = 17.sp, letterSpacing = 1.4.sp,
                     )
                 }
+            }
+        }
+
+        if (wide) Row(Modifier.fillMaxSize()) {
+            Column(Modifier.width(400.dp).fillMaxHeight()) {
+                BrandBar(band.name, onSettings)
+                MainTabs(selected = 0, onSelect = onTab)
+                SetTitle(db, entries)
+                FlowRow(
+                    Modifier.padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) { SetChips(db, editing, onToggleNotation, onPickSet, onToggleEdit, onShare) }
+                if (editing) EditActions({ pickSong = true }, { addMark = true })
+                Spacer(Modifier.weight(1f))
+                start()
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight().background(Palco.Line))
+            list(Modifier.weight(1f).fillMaxHeight())
+        } else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
+                BrandBar(band.name, onSettings)
+                MainTabs(selected = 0, onSelect = onTab)
+                SetTitle(db, entries)
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) { SetChips(db, editing, onToggleNotation, onPickSet, onToggleEdit, onShare) }
+                if (editing) EditActions({ pickSong = true }, { addMark = true })
+                list(Modifier.weight(1f))
+                start()
             }
         }
     }
@@ -240,6 +185,114 @@ fun SetlistScreen(
 }
 
 @Composable
+private fun SetTitle(db: DB, entries: List<Entry>) {
+    val songs = entries.count { it is Entry.Track }
+    val marks = entries.size - songs
+    val mins = (setDuration(entries) + 30) / 60
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Text(
+            "SCALETTA", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp, letterSpacing = 2.sp,
+        )
+        Text(
+            db.band.curSet?.name ?: "—", color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+            fontSize = 34.sp, lineHeight = 36.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
+        )
+        val parts = buildList {
+            add("$songs ${if (songs == 1) "brano" else "brani"}")
+            add("$mins min")
+            if (marks > 0) add("$marks ${if (marks == 1) "pausa" else "pause"}")
+        }
+        Text(parts.joinToString("  ·  "), color = Palco.Dim, fontFamily = Mono, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun SetChips(
+    db: DB, editing: Boolean, onToggleNotation: () -> Unit, onPickSet: (String) -> Unit,
+    onToggleEdit: () -> Unit, onShare: () -> Unit,
+) {
+    val band = db.band
+    Chip("Do Re Mi", selected = db.opt.italian, onClick = onToggleNotation)
+    band.sets.forEach { s -> Chip(s.name, selected = s.id == band.curSet?.id, onClick = { onPickSet(s.id) }) }
+    Chip("Modifica", selected = editing, onClick = onToggleEdit)
+    Chip("Condividi", selected = false, onClick = onShare)
+}
+
+@Composable
+private fun EditActions(onAddSong: () -> Unit, onAddMark: () -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        GhostButton("+ Brano", onClick = onAddSong)
+        GhostButton("+ Segnaposto", onClick = onAddMark)
+    }
+}
+
+@Composable
+private fun EntryRow(
+    i: Int, e: Entry, number: Int, editing: Boolean, db: DB, last: Int,
+    onOpen: (Int) -> Unit, onMove: (Int, Int) -> Unit, onRemove: (Int) -> Unit,
+) {
+    when (e) {
+        is Entry.Track -> Row(
+            Modifier.fillMaxWidth().heightIn(min = 58.dp)
+                .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
+                .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                number.toString().padStart(2, '0'), color = Palco.Amber, fontFamily = Mono,
+                fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.width(24.dp),
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    e.song.title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+                    fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                val sub = listOfNotNull(
+                    e.song.artist.takeIf { it.isNotBlank() },
+                    e.song.bpm?.let { "$it BPM" },
+                ).joinToString(" · ")
+                if (sub.isNotEmpty()) Text(sub, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp)
+            }
+            if (editing) EditButtons(i, last, onMove, onRemove) else {
+                val k = keyLabel(e.song, db.opt.notation, db.opt.accid)
+                if (k.isNotEmpty()) Text(
+                    k, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(48.dp).border(1.dp, Palco.Outline, RoundedCornerShape(6.dp)).padding(vertical = 4.dp),
+                )
+                Text(
+                    if (secs(e.song.dur) > 0) mmss(secs(e.song.dur)) else "", color = Palco.Dim,
+                    fontFamily = Mono, fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp),
+                )
+            }
+        }
+        is Entry.Mark -> Row(
+            Modifier.fillMaxWidth().heightIn(min = 50.dp).background(Palco.Panel)
+                .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
+                .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("—", color = Palco.Dim, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.width(24.dp))
+            Text(
+                e.label, color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Medium,
+                fontStyle = FontStyle.Italic, fontSize = 19.sp, modifier = Modifier.weight(1f),
+            )
+            if (editing) EditButtons(i, last, onMove, onRemove) else Text(
+                if (secs(e.dur) > 0) mmss(secs(e.dur)) else "", color = Palco.Dim, fontFamily = Mono,
+                fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(44.dp),
+            )
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+}
+
+@Composable
 private fun EditButtons(i: Int, last: Int, onMove: (Int, Int) -> Unit, onRemove: (Int) -> Unit) {
     Row {
         SmallIcon(Ic.Up, "Sposta su", enabled = i > 0) { onMove(i, i - 1) }
@@ -251,7 +304,7 @@ private fun EditButtons(i: Int, last: Int, onMove: (Int, Int) -> Unit, onRemove:
 @Composable
 private fun SmallIcon(
     icon: ImageVector, desc: String, enabled: Boolean = true,
-    tint: androidx.compose.ui.graphics.Color = Palco.Ink, onClick: () -> Unit,
+    tint: Color = Palco.Ink, onClick: () -> Unit,
 ) {
     Box(Modifier.size(44.dp).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, desc, tint = if (enabled) tint else Palco.Outline, modifier = Modifier.size(20.dp))
