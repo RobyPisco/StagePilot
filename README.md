@@ -28,7 +28,7 @@ APK di rilascio (piccolo, ridotto con R8, firmato con la chiave di debug di ques
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
-.\gradlew.bat assembleRelease        # appuild\outputspkeleasepp-release.apk
+.\gradlew.bat assembleRelease        # app\build\outputs\apk\release\app-release.apk
 ```
 
 Una copia da distribuire sta in `dist\Backline-0.2.0.apk` (non è nel repo). Per installarla: consentire
@@ -37,10 +37,10 @@ disinstallarla (e perde i dati: meglio un backup prima).
 
 ## Compilare e provare
 
-Serve il JDK 21 di Android Studio (il Java di sistema, se più recente, non va bene per Gradle):
+Serve un JDK 21 (qui Eclipse Adoptium; il Java di sistema e quello di Android Studio, ora il 25, non vanno bene per Gradle):
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 .\gradlew.bat testDebugUnitTest assembleDebug
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 adb shell am start -n it.backline.app/.MainActivity
@@ -120,9 +120,9 @@ Per leggerlo dal PC: `adb shell run-as it.backline.app cat files/db.json`.
 **Copie di sicurezza automatiche.** Il database sparisce se disinstalli l'app o il tablet si rompe, quindi a ogni
 apertura Backline:
 - salva una copia al giorno (le ultime 7) in `Android/data/it.backline.app/files/backups`; dal PC, con il cavo,
-  `.	oolsackup.ps1` le scarica in `backup-tablet\`;
+  `.\tools\backup.ps1` le scarica in `backup-tablet\`;
 - se «Brani dal PC» è configurato, manda una copia anche al PC (solo se il database è cambiato dall'ultima volta):
-  la pagina le tiene in `tools\pagina-pcackup\` (le ultime 10). Ripristino: Impostazioni → Importa → file
+  la pagina le tiene in `tools\pagina-pc\backup\` (le ultime 10). Ripristino: Impostazioni → Importa → file
   → «Sostituisci tutto». Dall'ultima copia la pagina ricava anche i brani che hai già, per avvisarti dei doppioni.
 
 ## Cose da sapere
