@@ -1,5 +1,11 @@
 package it.backline.app
 
+import androidx.compose.ui.Modifier
+import it.backline.app.ui.TabBar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -267,26 +273,6 @@ private fun App(
     }
 
     when (route) {
-        "settings" -> SettingsScreen(
-            db = db,
-            store = store,
-            onClose = { route = "main" },
-            onExport = {
-                val stamp = SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(Date())
-                exportLauncher.launch("backline-backup-$stamp.json")
-            },
-            onImport = { importLauncher.launch(arrayOf("*/*")) },
-            pcAddr = pcAddr,
-            pcCode = pcCode,
-            pcStatus = pcStatus,
-            pcBusy = pcBusy,
-            onPcSave = { a, c ->
-                pcAddr = a; pcCode = c
-                prefs.edit().putString("addr", a).putString("code", c).apply()
-            },
-            onPcFetch = { pcStatus = ""; fetchPc(silent = false) },
-        )
-
         "import" -> ImportScreen(
             newId = newId,
             initial = importText,
@@ -316,10 +302,12 @@ private fun App(
             )
         }
 
-        else -> if (tab == 0) SetlistScreen(
+        else -> Column(Modifier.fillMaxSize().background(Palco.Pitch)) {
+            Box(Modifier.weight(1f)) {
+            when (tab) {
+            0 -> SetlistScreen(
             db = db,
             editing = editingSet,
-            onTab = { tab = it },
             onOpen = { liveAt = it; route = "live" },
             onToggleNotation = { store.updateOptions { it.copy(notation = if (it.notation == "it") "en" else "it") } },
             onPickSet = { id -> store.updateBand { it.copy(cur = id) } },
@@ -329,17 +317,40 @@ private fun App(
             onAddSong = { id -> store.updateItems { it + SetItem("song", id = id) } },
             onAddMark = { label, dur -> store.updateItems { it + SetItem("mark", label = label, dur = dur) } },
             onShare = { shareChoice = true },
-            onSettings = { route = "settings" },
-        ) else RepertoireScreen(
+            onSettings = { tab = 2 },
+        )
+            1 -> RepertoireScreen(
             db = db,
-            onTab = { tab = it },
             onOpenSong = { id -> editId = id; route = "edit" },
             onNewSong = { editId = null; draft = null; newId = store.newId("s"); route = "edit" },
             onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
-            onSettings = { route = "settings" },
+            onSettings = { tab = 2 },
             onSort = { s -> store.updateOptions { it.copy(sort = s) } },
             onDeleteSong = { id -> store.deleteSong(id) },
         )
+            else -> SettingsScreen(
+                    db = db,
+                    store = store,
+                    onClose = { tab = 0 },
+                    onExport = {
+                        val stamp = SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(Date())
+                        exportLauncher.launch("backline-backup-$stamp.json")
+                    },
+                    onImport = { importLauncher.launch(arrayOf("*/*")) },
+                    pcAddr = pcAddr,
+                    pcCode = pcCode,
+                    pcStatus = pcStatus,
+                    pcBusy = pcBusy,
+                    onPcSave = { a, c ->
+                        pcAddr = a; pcCode = c
+                        prefs.edit().putString("addr", a).putString("code", c).apply()
+                    },
+                    onPcFetch = { pcStatus = ""; fetchPc(silent = false) },
+                )
+            }
+            }
+            TabBar(tab, onSelect = { tab = it })
+        }
     }
 
     pendingPc?.let { batch ->

@@ -37,5 +37,6 @@ object Ic {
     val Close = icon("close", "M6 6l12 12M18 6L6 18")
     val Sliders = icon("sliders", "M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6")
     val Grip = icon("grip", "M5 9h14M5 15h14")
+    val Note = icon("note", "M9 18V5l11-2v13 M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z M20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z")
     val Plus = icon("plus", "M12 5v14M5 12h14")
 }

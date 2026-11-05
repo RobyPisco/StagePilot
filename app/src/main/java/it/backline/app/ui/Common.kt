@@ -1,5 +1,7 @@
 package it.backline.app.ui
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,11 +51,11 @@ fun PalcoField(
         value = value,
         onValueChange = onChange,
         modifier = modifier.fillMaxWidth(),
-        label = { Text(label, fontFamily = Condensed) },
+        label = { Text(label, fontFamily = Sans) },
         singleLine = singleLine,
         minLines = minLines,
         isError = error,
-        supportingText = supporting?.let { { Text(it, fontFamily = Condensed, fontSize = 12.sp) } },
+        supportingText = supporting?.let { { Text(it, fontFamily = Sans, fontSize = 12.sp) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
         textStyle = TextStyle(
             color = Palco.Ink, fontSize = if (mono) 15.sp else 17.sp,
@@ -71,52 +73,68 @@ fun PalcoField(
     )
 }
 
-/** Barra del marchio, con il nome del gruppo a destra. */
+/** Riga in alto: il marchio e, a destra, il nome del gruppo (porta alle impostazioni). */
 @Composable
 fun BrandBar(bandName: String, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "BACKLINE", color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
-            fontSize = 13.sp, letterSpacing = 2.6.sp,
-        )
+        Text("Backline", color = Palco.Amber, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Spacer(Modifier.weight(1f))
         Row(
-            Modifier.clip(CircleShape).border(1.dp, Palco.Outline, CircleShape)
-                .clickable(onClick = onClick)
+            Modifier.clip(CircleShape).background(Palco.Raise).clickable(onClick = onClick)
                 .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(bandName, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(bandName, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp)
             Spacer(Modifier.width(6.dp))
             Icon(Ic.Chevron, null, tint = Palco.Dim, modifier = Modifier.size(12.dp))
         }
-        Box(
-            Modifier.padding(start = 8.dp).size(40.dp).clip(CircleShape).border(1.dp, Palco.Outline, CircleShape)
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Ic.Sliders, "Impostazioni", tint = Palco.Ink, modifier = Modifier.size(20.dp)) }
     }
 }
 
-/** Le due linguette: Scaletta e Repertorio. */
+/** Titolo grande, come nelle app di sistema. */
 @Composable
-fun MainTabs(selected: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        listOf("SCALETTA", "REPERTORIO").forEachIndexed { i, t ->
-            Column(
-                Modifier.weight(1f).clickable { onSelect(i) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    t, color = if (i == selected) Palco.Ink else Palco.Dim, fontFamily = Condensed,
-                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp, letterSpacing = 1.8.sp,
-                    modifier = Modifier.padding(vertical = 13.dp),
-                )
-                Box(Modifier.fillMaxWidth().height(2.dp).background(if (i == selected) Palco.Amber else Palco.Line))
+fun LargeTitle(text: String, sub: String? = null) {
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Text(text, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 38.sp)
+        if (sub != null) Text(sub, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/** La barra in basso con le tre sezioni: Scaletta, Repertorio, Impostazioni. */
+@Composable
+fun TabBar(selected: Int, onSelect: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().background(Palco.Panel).navigationBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+        Row(Modifier.fillMaxWidth()) {
+            listOf(Ic.Struct to "Scaletta", Ic.Note to "Repertorio", Ic.Sliders to "Impostazioni").forEachIndexed { i, (icon, label) ->
+                val c = if (i == selected) Palco.Amber else Palco.Dim
+                Column(
+                    Modifier.weight(1f).clickable { onSelect(i) }.padding(top = 8.dp, bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(icon, label, tint = c, modifier = Modifier.size(24.dp))
+                    Text(label, color = c, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
             }
+        }
+    }
+}
+
+/** Selettore a segmenti, come quelli di iOS. */
+@Composable
+fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Palco.Raise).padding(3.dp)) {
+        options.forEachIndexed { i, t ->
+            Text(
+                t, color = Palco.Ink, fontFamily = Sans, fontWeight = if (i == selected) FontWeight.SemiBold else FontWeight.Normal,
+                fontSize = 14.sp, textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
+                    .then(if (i == selected) Modifier.background(Palco.Outline) else Modifier)
+                    .clickable { onSelect(i) }.padding(vertical = 8.dp),
+            )
         }
     }
 }
@@ -125,28 +143,23 @@ fun MainTabs(selected: Int, onSelect: (Int) -> Unit) {
 @Composable
 fun AmberButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
             .background(if (enabled) Palco.Amber else Palco.Outline)
-            .clickable(enabled = enabled, onClick = onClick).padding(vertical = 16.dp),
+            .clickable(enabled = enabled, onClick = onClick).padding(vertical = 15.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text.uppercase(), color = Palco.OnAmber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
-            fontSize = 16.sp, letterSpacing = 1.4.sp,
-        )
+        Text(text, color = Palco.OnAmber, fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
     }
 }
 
-/** Bottone sottile, per azioni secondarie. */
+/** Bottone secondario: fondo scuro, testo ambra (rosso se distruttivo). */
 @Composable
 fun GhostButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, onClick: () -> Unit) {
-    val c = if (danger) Palco.Warn else Palco.Ink
     Text(
-        text.uppercase(), color = c, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-        letterSpacing = 1.4.sp,
-        modifier = modifier.clip(RoundedCornerShape(10.dp)).border(1.dp, if (danger) Palco.Warn else Palco.Outline, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        text, color = if (danger) Palco.Warn else Palco.Amber, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 15.sp,
+        modifier = modifier.clip(RoundedCornerShape(12.dp)).background(Palco.Raise)
+            .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 11.dp),
     )
 }
 
@@ -164,18 +177,18 @@ fun PalcoDialog(
         containerColor = Palco.Panel,
         titleContentColor = Palco.Ink,
         textContentColor = Palco.Ink,
-        title = { Text(title, fontFamily = Condensed, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+        title = { Text(title, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 20.sp) },
         text = content,
         confirmButton = {
             if (onConfirm != null) Text(
-                confirmText.uppercase(), color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                confirmText.uppercase(), color = Palco.Amber, fontFamily = Sans, fontWeight = FontWeight.Bold,
                 fontSize = 14.sp, letterSpacing = 1.2.sp,
                 modifier = Modifier.clickable(onClick = onConfirm).padding(12.dp),
             )
         },
         dismissButton = {
             Text(
-                "ANNULLA", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+                "ANNULLA", color = Palco.Dim, fontFamily = Sans, fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp, letterSpacing = 1.2.sp,
                 modifier = Modifier.clickable(onClick = onDismiss).padding(12.dp),
             )

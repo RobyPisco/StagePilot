@@ -9,18 +9,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SwipeToDismissBox
@@ -53,7 +57,6 @@ import it.backline.app.data.DB
 @Composable
 fun RepertoireScreen(
     db: DB,
-    onTab: (Int) -> Unit,
     onOpenSong: (String) -> Unit,
     onNewSong: () -> Unit,
     onImport: () -> Unit,
@@ -78,32 +81,35 @@ fun RepertoireScreen(
         else -> found
     }
 
-    Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
             BrandBar(band.name, onSettings)
-            MainTabs(selected = 1, onSelect = onTab)
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+            LargeTitle("Repertorio", "${shown.size} di ${band.songs.size} brani")
 
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                 PalcoField(query, { query = it }, "Cerca titolo, artista o tag")
-                Text(
-                    "${shown.size} di ${band.songs.size} brani", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-                )
+                Spacer(Modifier.height(10.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("add" to "Inserimento", "title" to "Titolo", "artist" to "Artista", "key" to "Tonalità", "bpm" to "BPM")
                         .forEach { (id, label) -> Chip(label, selected = db.opt.sort == id) { onSort(id) } }
                 }
             }
 
-            LazyColumn(Modifier.weight(1f)) {
-                items(shown, key = { it.id }) { s ->
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(top = 4.dp, bottom = 8.dp)) {
+                itemsIndexed(shown, key = { _, it -> it.id }) { idx, s ->
+                    val r = 14.dp
+                    val shape = RoundedCornerShape(
+                        topStart = if (idx == 0) r else 0.dp, topEnd = if (idx == 0) r else 0.dp,
+                        bottomStart = if (idx == shown.lastIndex) r else 0.dp, bottomEnd = if (idx == shown.lastIndex) r else 0.dp,
+                    )
+                    Column(Modifier.padding(horizontal = 16.dp)) {
                     val dismiss = rememberSwipeToDismissBoxState(confirmValueChange = {
                         // la riga torna al suo posto: si elimina solo dopo la conferma
                         if (it != SwipeToDismissBoxValue.Settled) toDelete = s.id
                         false
                     })
                     SwipeToDismissBox(
+                        modifier = Modifier.clip(shape),
                         state = dismiss,
                         backgroundContent = {
                             val toRight = dismiss.dismissDirection == SwipeToDismissBoxValue.StartToEnd
@@ -112,15 +118,15 @@ fun RepertoireScreen(
                                 contentAlignment = if (toRight) Alignment.CenterStart else Alignment.CenterEnd,
                             ) {
                                 Text(
-                                    "ELIMINA", color = Palco.OnAmber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                                    "ELIMINA", color = Palco.OnAmber, fontFamily = Sans, fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp, letterSpacing = 1.6.sp,
                                 )
                             }
                         },
                     ) {
                     Row(
-                        Modifier.fillMaxWidth().background(Palco.Pitch).heightIn(min = 60.dp).clickable { onOpenSong(s.id) }
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        Modifier.fillMaxWidth().background(Palco.Panel).heightIn(min = 60.dp).clickable { onOpenSong(s.id) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
@@ -129,8 +135,8 @@ fun RepertoireScreen(
                         )
                         Column(Modifier.weight(1f)) {
                             Text(
-                                s.title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
-                                fontSize = 19.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                s.title, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.SemiBold,
+                                fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                             val sub = listOfNotNull(
                                 s.artist.takeIf { it.isNotBlank() },
@@ -138,28 +144,31 @@ fun RepertoireScreen(
                                 s.tags.takeIf { it.isNotEmpty() }?.joinToString(" "),
                             ).joinToString(" · ")
                             if (sub.isNotEmpty()) Text(
-                                sub, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp, maxLines = 1,
+                                sub, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
                         val k = keyLabel(s, db.opt.notation, db.opt.accid)
                         if (k.isNotEmpty()) Text(
-                            k, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                            k, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.width(48.dp).border(1.dp, Palco.Outline, RoundedCornerShape(6.dp)).padding(vertical = 4.dp),
+                            modifier = Modifier.width(48.dp).clip(RoundedCornerShape(8.dp)).background(Palco.Raise).padding(vertical = 5.dp),
                         )
                         Text(
-                            if (secs(s.dur) > 0) mmss(secs(s.dur)) else "", color = Palco.Dim, fontFamily = Mono,
+                            if (secs(s.dur) > 0) mmss(secs(s.dur)) else "", color = Palco.Dim, fontFamily = Sans,
                             fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp),
                         )
                     }
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+                    if (idx < shown.lastIndex) Box(Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 38.dp)) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+                    }
+                    }
                 }
             }
 
             Text(
-                "Scorri una riga di lato per eliminare il brano", color = Palco.Dim, fontFamily = Condensed, fontSize = 12.sp,
+                "Scorri una riga di lato per eliminare il brano", color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             Row(
@@ -179,7 +188,7 @@ fun RepertoireScreen(
         ) {
             Text(
                 "«${song.title}» sparisce dal repertorio e da tutte le scalette.",
-                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+                color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
             )
         }
     }

@@ -2,6 +2,7 @@ package it.backline.app.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,22 +62,9 @@ fun SettingsScreen(
 
     BackHandler(onBack = onClose)
 
-    Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
-            Row(
-                Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 6.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
-                    Icon(Ic.Back, "Indietro", tint = Palco.Dim, modifier = Modifier.size(22.dp))
-                }
-                Text(
-                    "Gruppo e impostazioni", color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp, modifier = Modifier.padding(start = 6.dp),
-                )
-            }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
-
+            LargeTitle("Impostazioni", "Gruppo, scalette, lettura e backup")
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -102,12 +90,12 @@ fun SettingsScreen(
                     Column(Modifier.fillMaxWidth().background(Palco.Panel, RoundedCornerShape(12.dp)).padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                s.name, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
+                                s.name, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.SemiBold,
                                 fontSize = 18.sp, modifier = Modifier.weight(1f),
                             )
-                            if (s.id == band.curSet?.id) Text("IN USO", color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.4.sp)
+                            if (s.id == band.curSet?.id) Text("IN USO", color = Palco.Amber, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.4.sp)
                         }
-                        Text("${s.items.size} ${if (s.items.size == 1) "voce" else "voci"}", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
+                        Text("${s.items.size} ${if (s.items.size == 1) "voce" else "voci"}", color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             GhostButton("Rinomina") { renameSet = s.id }
                             GhostButton("Duplica") { store.duplicateSet(s.id) }
@@ -120,19 +108,16 @@ fun SettingsScreen(
                 // ── lettura ──
                 Section("Come si legge")
                 Hint("Notazione degli accordi")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("C D E", selected = !opt.italian) { store.updateOptions { it.copy(notation = "en") } }
-                    Chip("Do Re Mi", selected = opt.italian) { store.updateOptions { it.copy(notation = "it") } }
+                Segmented(listOf("C D E", "Do Re Mi"), if (opt.italian) 1 else 0) { i ->
+                    store.updateOptions { it.copy(notation = if (i == 1) "it" else "en") }
                 }
                 Hint("Alterazioni: automatiche scelgono dalla tonalità (Si♭ in Fa, La# in Mi)")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("Automatiche", selected = opt.accid == "auto") { store.updateOptions { it.copy(accid = "auto") } }
-                    Chip("Diesis", selected = opt.accid == "sharp") { store.updateOptions { it.copy(accid = "sharp") } }
-                    Chip("Bemolli", selected = opt.accid == "flat") { store.updateOptions { it.copy(accid = "flat") } }
+                Segmented(listOf("Automatiche", "Diesis", "Bemolli"), listOf("auto", "sharp", "flat").indexOf(opt.accid).coerceAtLeast(0)) { i ->
+                    store.updateOptions { it.copy(accid = listOf("auto", "sharp", "flat")[i]) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Corpo del testo in live: ${opt.fs}", color = Palco.Ink, fontFamily = Condensed,
+                        "Corpo del testo in live: ${opt.fs}", color = Palco.Ink, fontFamily = Sans,
                         fontWeight = FontWeight.SemiBold, fontSize = 16.sp, modifier = Modifier.weight(1f),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -140,11 +125,13 @@ fun SettingsScreen(
                         Chip("A+", selected = false) { store.updateOptions { it.copy(fs = (it.fs + 2).coerceIn(14, 48)) } }
                     }
                 }
-                Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
-                Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
-                Toggle("Pulsazione dei BPM", "Un puntino che batte il tempo del brano, in testata: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
-                Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
-                Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Palco.Panel).padding(horizontal = 16.dp, vertical = 6.dp)) {
+                    Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
+                    Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
+                    Toggle("Pulsazione dei BPM", "Un puntino che batte il tempo del brano, in testata: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
+                    Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
+                    Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
+                }
 
                 // ── backup ──
                 Section("Backup")
@@ -173,7 +160,7 @@ fun SettingsScreen(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     GhostButton(if (pcBusy) "Cerco…" else "Scarica") { if (!pcBusy) onPcFetch() }
-                    if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -185,7 +172,7 @@ fun SettingsScreen(
                         "Backline ${i.versionName} (build ${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(i)})"
                     }.getOrDefault("Backline")
                 }
-                Text(version, color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp)
+                Text(version, color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp)
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -206,14 +193,14 @@ fun SettingsScreen(
         PalcoDialog("Eliminare la scaletta?", "Elimina", { store.deleteSet(id); deleteSet = null }, { deleteSet = null }) {
             Text(
                 "«${band.sets.firstOrNull { it.id == id }?.name}» sparisce. I brani restano nel repertorio.",
-                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+                color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
             )
         }
     }
     if (deleteBand) PalcoDialog("Eliminare il gruppo?", "Elimina", { store.deleteBand(band.id); deleteBand = false }, { deleteBand = false }) {
         Text(
             "«${band.name}» sparisce con tutti i suoi brani e le sue scalette. Se vuoi tenerli, esporta prima un backup.",
-            color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+            color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
         )
     }
 }
@@ -221,22 +208,22 @@ fun SettingsScreen(
 @Composable
 private fun Section(text: String) {
     Text(
-        text.uppercase(), color = Palco.Amber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
-        fontSize = 12.sp, letterSpacing = 2.4.sp, modifier = Modifier.padding(top = 14.dp),
+        text, color = Palco.Dim, fontFamily = Sans, fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp, modifier = Modifier.padding(top = 18.dp, start = 4.dp),
     )
 }
 
 @Composable
 private fun Hint(text: String) {
-    Text(text, color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+    Text(text, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp)
 }
 
 @Composable
 private fun Toggle(title: String, desc: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-            Text(desc, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp)
+            Text(title, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(desc, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp)
         }
         Switch(
             checked = checked, onCheckedChange = onChange,

@@ -33,6 +33,10 @@ val Condensed = FontFamily(
     Font(R.font.ibm_plex_sans_condensed_bold, FontWeight.Bold),
 )
 
+/** Il carattere di sistema: nelle schermate di gestione (scaletta, repertorio, impostazioni) si legge come
+ *  nelle app di sistema. Il Live resta nel carattere condensato, pensato per leggere da lontano. */
+val Sans = FontFamily.SansSerif
+
 val Mono = FontFamily(
     Font(R.font.ibm_plex_mono_medium, FontWeight.Medium),
     Font(R.font.ibm_plex_mono_semibold, FontWeight.SemiBold),
