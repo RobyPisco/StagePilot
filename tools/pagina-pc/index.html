@@ -278,7 +278,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     setIfFree('title', j.title); setIfFree('artist', j.artist); setIfFree('dur', j.dur);
     if (j.bpm && !touched.bpm) {
       $('f-bpm').value = Math.round(j.bpm);
-      info.bpmSource = j.bpm_source === 'audio' ? 'stimato dall\'audio (controlla: può uscire il doppio o la metà)' : 'da Deezer';
+      info.bpmSource = j.bpm_source === 'audio' ? 'stimato dall\'audio (controlla: può uscire il doppio o la metà)' : j.bpm_source === 'songbpm' ? 'da SongBPM' : 'da Deezer';
     }
     showSrc(); checkWarnings();
     var pct = Math.round((j.score || 0) * 100);

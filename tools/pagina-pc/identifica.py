@@ -3,8 +3,8 @@
 1. Si cercano su LRCLIB le frasi più ricorrenti del testo (di solito una è il titolo).
 2. Ogni risultato ha il testo completo: si confronta con quello incollato (sequenze di tre parole in comune)
    e vince chi ne spiega di più. Così non basta il titolo giusto: deve essere proprio quella canzone.
-3. Da Deezer si prendono la durata della versione in studio e, se c'è, il BPM.
-4. Se Deezer non ha il BPM, e il componente opzionale `miniaudio` è installato, lo si stima dall'anteprima
+3. Durata e BPM si cercano su songbpm.com (songbpm.py); se manca, da Deezer la durata della versione in studio e, se c'è, il BPM.
+4. Se nessuno dei due ha il BPM, e il componente opzionale `miniaudio` è installato, lo si stima dall'anteprima
    audio di 30 secondi (bpm.py).
 
 Tutto con la libreria standard, tranne l'ultimo passo. Se la rete non c'è, ritorna senza niente e la pagina
@@ -211,11 +211,22 @@ def identify(lyrics, guesses, title="", artist="", want_bpm_from_audio=True, log
         return {"found": False, "alternatives": cands[:4], "tried": guesses[:7]}
     best = cands[0]
     extra = deezer_enrich(best["title"], best["artist"], best.get("duration"), log)
+    # prima songbpm.com (BPM e durata); se non c'è o non risponde, quello che ha trovato Deezer
+    sb = None
+    try:
+        import songbpm
+        sb = songbpm.lookup(best["title"], best["artist"], extra["duration"] or best.get("duration"), log)
+    except Exception as e:                      # non deve rompere il resto
+        log("  songbpm non utilizzabile: %s" % e)
+    dur = mmss(extra["duration"] or best.get("duration"))
+    if sb and songbpm.secs(sb["dur"]) and abs(songbpm.secs(sb["dur"]) - (extra["duration"] or best.get("duration") or songbpm.secs(sb["dur"]))) <= 20:
+        dur = sb["dur"]                          # stessa versione: la durata di songbpm; se è lontana, è un'altra versione
     res = {
         "found": True,
         "title": best["title"], "artist": best["artist"],
-        "dur": mmss(extra["duration"] or best.get("duration")),
-        "bpm": extra["bpm"], "bpm_source": extra.get("bpm_source"),
+        "dur": dur,
+        "bpm": sb["bpm"] if sb else extra["bpm"],
+        "bpm_source": "songbpm" if sb else extra.get("bpm_source"),
         "score": best["score"],
         "alternatives": [{"title": c["title"], "artist": c["artist"], "score": c["score"]} for c in cands[1:4]],
     }

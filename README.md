@@ -89,7 +89,9 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
      il titolo) e conferma che il testo trovato coincida con quello incollato; a parità di testo tra cover e
      originale sceglie l'artista più noto su Deezer. Se sbaglia, ci sono le alternative e «Cerca di nuovo»
      con titolo e artista scritti a mano;
-   - prende la **durata** e, se c'è, il **BPM** da [Deezer](https://developers.deezer.com/api); se Deezer non
+   - prende **BPM** e **durata** da [SongBPM](https://songbpm.com/) (`songbpm.py`: legge la pagina dei risultati,
+    una richiesta per ricerca; la tonalità del sito non si usa, perché manca il maggiore/minore). Se il sito non
+    risponde o non trova il brano, ripiega su [Deezer](https://developers.deezer.com/api); se Deezer non
      ha il BPM lo stima dall'anteprima audio di 30 secondi, con un piccolo componente opzionale
      (`miniaudio`, la pagina lo installa solo se tocchi «Installalo»). La stima è precisa di un paio di BPM,
      ma un brano lento può uscire al doppio: ci sono i tasti **½** e **×2** e **Batti**.

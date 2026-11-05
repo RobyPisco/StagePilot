@@ -3,7 +3,7 @@ import json, os, shutil, subprocess, sys, tempfile, time, urllib.request, urllib
 
 SRC = os.path.dirname(os.path.abspath(__file__))
 tmp = tempfile.mkdtemp()
-for f in ("server.py", "identifica.py", "bpm.py"):
+for f in ("server.py", "identifica.py", "bpm.py", "songbpm.py"):
     shutil.copy(os.path.join(SRC, f), tmp)
 port = "8791"
 env = dict(os.environ, BACKLINE_PORT=port)

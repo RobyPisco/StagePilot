@@ -31,7 +31,7 @@ BACKUP_DIR = HERE / "backup"              # le copie di sicurezza che manda l'ap
 KEEP_BACKUPS = 10
 STATIC = {"/": "index.html", "/index.html": "index.html", "/convert.bundle.js": "convert.bundle.js",
           "/pulizia.js": "pulizia.js"}
-sys.path.insert(0, str(HERE))                  # identifica.py e bpm.py stanno accanto a questo file
+sys.path.insert(0, str(HERE))                  # identifica.py, songbpm.py e bpm.py stanno accanto a questo file
 LOCK = threading.Lock()
 
 
