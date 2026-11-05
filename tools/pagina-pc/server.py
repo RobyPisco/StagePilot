@@ -27,6 +27,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PORT = int(os.environ.get("BACKLINE_PORT", "8765"))
 STATE_FILE = HERE / "stato.json"          # codice e coda: restano fra un avvio e l'altro
+BACKUP_DIR = HERE / "backup"              # le copie di sicurezza che manda l'app
+KEEP_BACKUPS = 10
 STATIC = {"/": "index.html", "/index.html": "index.html", "/convert.bundle.js": "convert.bundle.js",
           "/pulizia.js": "pulizia.js"}
 sys.path.insert(0, str(HERE))                  # identifica.py e bpm.py stanno accanto a questo file
@@ -41,6 +43,7 @@ def load_state():
         s = {}
     s.setdefault("code", "".join(secrets.choice("0123456789") for _ in range(4)))
     s.setdefault("queue", [])
+    s.setdefault("sent", [])                   # ultimi brani scaricati dal telefono
     return s
 
 
@@ -50,6 +53,51 @@ def save_state(s):
 
 STATE = load_state()
 save_state(STATE)
+
+
+def song_key(title, artist=""):
+    """Stessa chiave dell'app: titolo e artista senza maiuscole, accenti e punteggiatura."""
+    import unicodedata
+
+    def n(t):
+        t = unicodedata.normalize("NFD", str(t).lower())
+        return "".join(c for c in t if c.isalnum())
+    return n(title) + "|" + n(artist)
+
+
+# ── copie di sicurezza dell'app ─────────────────────────────────────────────
+def save_backup(raw):
+    """Salva il database mandato dall'app. Ritorna il nome del file, o None se non sembra un backup."""
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("bands"), list):
+        return None
+    BACKUP_DIR.mkdir(exist_ok=True)
+    name = "backline-%s.json" % time.strftime("%Y%m%d-%H%M%S")
+    (BACKUP_DIR / name).write_bytes(raw)
+    for old in sorted(BACKUP_DIR.glob("backline-*.json"), reverse=True)[KEEP_BACKUPS:]:
+        old.unlink(missing_ok=True)
+    return name
+
+
+def last_backup():
+    files = sorted(BACKUP_DIR.glob("backline-*.json"), reverse=True) if BACKUP_DIR.exists() else []
+    return files[0] if files else None
+
+
+def library_keys():
+    """I brani che il telefono ha già, dall'ultimo backup: serve a avvisare dei doppioni."""
+    f = last_backup()
+    if not f:
+        return []
+    try:
+        db = json.loads(f.read_text(encoding="utf-8"))
+        band = next((b for b in db["bands"] if b.get("id") == db.get("curBand")), db["bands"][0])
+        return [song_key(s.get("title", ""), s.get("artist", "")) for s in band.get("songs", [])]
+    except (OSError, ValueError, KeyError, IndexError):
+        return []
 
 
 def lan_ip():
@@ -189,12 +237,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def read_json(self):
+    def read_raw(self, limit=2_000_000):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > 2_000_000:
+        if n > limit:
+            return None
+        return self.rfile.read(n)
+
+    def read_json(self):
+        raw = self.read_raw()
+        if raw is None:
             return None
         try:
-            return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
+            return json.loads(raw.decode("utf-8") or "{}")
         except ValueError:
             return None
 
@@ -216,8 +270,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status" and self.local():
             with LOCK:
                 q = [{"id": e["id"], "title": e["song"]["title"], "artist": e["song"]["artist"]} for e in STATE["queue"]]
+            lb = last_backup()
+            with LOCK:
+                sent = [{"title": e["title"], "artist": e["artist"], "at": e["at"]} for e in STATE["sent"][-8:]][::-1]
             return self.send_json({"ip": lan_ip(), "port": PORT, "code": STATE["code"], "queue": q, "adb": adb_devices(),
-                                   "bpmAudio": has_audio_bpm()})
+                                   "bpmAudio": has_audio_bpm(), "sent": sent, "library": library_keys(),
+                                   "backup": lb.stat().st_mtime if lb else None})
         if path == "/api/inbox":                  # il telefono: coda dei brani, con il codice
             if not self.code_ok():
                 return self.send_json({"error": "codice errato"}, 403)
@@ -228,6 +286,13 @@ class Handler(BaseHTTPRequestHandler):
     # --- POST
     def do_POST(self):
         path = self.path.split("?")[0]
+        if path == "/api/backup":                 # il telefono: copia di sicurezza del database
+            if not self.code_ok():
+                return self.send_json({"error": "codice errato"}, 403)
+            raw = self.read_raw(20_000_000)
+            name = save_backup(raw) if raw else None
+            return self.send_json({"ok": True, "file": name}) if name else self.send_json({"error": "non è un backup"}, 400)
+
         data = self.read_json()
         if data is None:
             return self.send_json({"error": "richiesta non valida"}, 400)
@@ -237,6 +302,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json({"error": "codice errato"}, 403)
             ids = set(data.get("ids") or [])
             with LOCK:
+                for e in STATE["queue"]:
+                    if e["id"] in ids:
+                        STATE["sent"].append({"title": e["song"]["title"], "artist": e["song"]["artist"], "at": time.time()})
+                STATE["sent"] = STATE["sent"][-30:]
                 STATE["queue"] = [e for e in STATE["queue"] if e["id"] not in ids]
                 save_state(STATE)
             return self.send_json({"ok": True})
@@ -265,11 +334,18 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/queue":
             if not songs:
                 return self.send_json({"error": "servono almeno un titolo e un testo"}, 400)
+            skipped = []
             with LOCK:
+                have = {song_key(e["song"]["title"], e["song"]["artist"]) for e in STATE["queue"]}
                 for s in songs:
+                    k = song_key(s["title"], s["artist"])
+                    if k in have:                  # già in coda: non si mette due volte
+                        skipped.append(s["title"])
+                        continue
+                    have.add(k)
                     STATE["queue"].append({"id": uuid.uuid4().hex[:10], "song": s, "at": time.time()})
                 save_state(STATE)
-            return self.send_json({"ok": True, "queued": len(songs)})
+            return self.send_json({"ok": True, "queued": len(songs) - len(skipped), "skipped": skipped})
 
         if path == "/api/queue/remove":
             with LOCK:
@@ -287,6 +363,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):      # niente crash se l'output non è una console UTF-8
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     try:
         httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     except OSError as e:

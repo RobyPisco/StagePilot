@@ -63,6 +63,7 @@ button{font:inherit;cursor:pointer;border-radius:10px}
 .q b{font-weight:600}.q span{color:var(--dim);font-size:14px}
 .q button{margin-left:auto;background:none;border:0;color:var(--dim);font-size:20px;padding:2px 8px}
 .q button:hover{color:var(--warn)}
+.warnbox{margin-top:8px;font-size:14px;color:var(--amber)}
 code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radius:6px;color:var(--amber)}
 .steps{color:var(--dim);font-size:14px;padding-left:18px}
 .steps li{margin:3px 0}
@@ -112,12 +113,20 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     <div class="card">
       <h2>Così si leggerà</h2>
       <div id="stat" class="hint" style="margin:0 0 8px"></div>
+      <div id="warn" class="warnbox" hidden></div>
       <div id="prev"><div class="empty">L'anteprima compare appena incolli il testo.</div></div>
     </div>
 
     <div class="card">
       <h2>Invia al telefono</h2>
-      <div class="row">
+      <div id="batchbox" hidden>
+        <div class="hint" style="margin:0 0 4px">Pronti da inviare insieme (<span id="bn">0</span>):</div>
+        <div id="batch"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="add" type="button" title="Tiene questo brano da parte e svuota il modulo, per prepararne un altro">+ Aggiungi alla lista</button>
+      </div>
+      <div class="row" style="margin-top:10px">
         <button class="primary" id="send" type="button">Invia (Wi-Fi)</button>
         <button class="btn" id="cable" type="button">Via cavo (adb)</button>
         <button class="btn" id="clear" type="button">Nuovo brano</button>
@@ -128,6 +137,8 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     <div class="card">
       <h2>In coda per il telefono <span id="qn"></span></h2>
       <div id="queue"><div class="empty">Niente in coda.</div></div>
+      <div id="sentbox" hidden style="margin-top:12px"><h2>Già scaricati dal telefono</h2><div id="sent"></div></div>
+      <div id="bk" class="hint" style="margin-top:12px"></div>
       <ol class="steps" style="margin-top:12px">
         <li>Su Backline: <b>tocca il nome del gruppo → Brani dal PC</b>.</li>
         <li>Indirizzo <code id="addr">…</code> e codice <code id="code">…</code> (una volta sola).</li>
@@ -148,6 +159,14 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
   var info = {};             // dati riconosciuti: { bpmSource, keySource }
   var runId = 0;             // per scartare le risposte di ricerche superate
   var audioOk = false;
+  var library = [];          // brani già nel telefono (dall'ultimo backup), per avvisare dei doppioni
+  var batch = [];            // brani preparati e tenuti da parte, da inviare insieme
+  try { batch = JSON.parse(localStorage.getItem('backline:batch') || '[]'); } catch (e) { batch = []; }
+  function saveBatch() { try { localStorage.setItem('backline:batch', JSON.stringify(batch)); } catch (e) {} }
+  function songKey(t, a) {
+    var n = function (x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[^\p{L}\p{N}]/gu, ''); };
+    return n(t) + '|' + n(a);
+  }
 
   F.forEach(function (n) { $('f-' + n).addEventListener('input', function () { touched[n] = true; if (n === 'bpm') info.bpmSource = 'a mano'; showSrc(); }); });
 
@@ -157,6 +176,24 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     $('bpmsrc').textContent = $('f-bpm').value ? (info.bpmSource ? 'BPM ' + info.bpmSource : '') : '';
     $('keysrc').textContent = $('f-key').value ? (info.keySource ? info.keySource : '') : '';
   }
+
+  // ── avvisi: doppioni e accordi che non c'entrano ───────────────────────────
+  function checkWarnings() {
+    var out = [], title = $('f-title').value.trim();
+    if (title) {
+      var k = songKey(title, $('f-artist').value);
+      if (library.indexOf(k) >= 0) out.push('«' + esc(title) + '» è già nel repertorio del telefono: l\'app non lo aggiungerà due volte.');
+      else if (batch.some(function (b) { return songKey(b.title, b.artist) === k; })) out.push('«' + esc(title) + '» è già nella lista da inviare.');
+    }
+    var key = $('f-key').value.trim();
+    // con la tonalità solo dedotta dagli accordi il controllo non ha senso: darebbe ragione agli accordi per costruzione
+    var bad = key && !(info.keySource && /dedott/.test(info.keySource) && !touched.key) ? PC.suspectChords(body, key) : [];
+    if (bad.length) out.push('Accordi insoliti per la tonalità ' + esc(key) + ': <b>' + bad.slice(0, 8).map(esc).join(', ') +
+      '</b>. Può essere un errore del tab: controlla l\'anteprima.');
+    $('warn').innerHTML = out.join('<br>');
+    $('warn').hidden = !out.length;
+  }
+  ['title', 'artist', 'key'].forEach(function (n) { $('f-' + n).addEventListener('input', checkWarnings); });
 
   // ── anteprima come in live ────────────────────────────────────────────────
   function render(cp) {
@@ -200,6 +237,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     if (res.meta.key) { setIfFree('key', res.meta.key); if (!touched.key) info.keySource = 'dalla testata'; }
     else if (chords >= 3 && !touched.key) { var k = PC.inferKey(body); if (k) { $('f-key').value = k; info.keySource = 'dedotta dagli accordi'; } }
     showSrc();
+    checkWarnings();
 
     // riconoscimento della canzone: solo se il testo è cambiato davvero, e dopo una pausa nella digitazione
     clearTimeout(identTimer);
@@ -242,7 +280,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
       $('f-bpm').value = Math.round(j.bpm);
       info.bpmSource = j.bpm_source === 'audio' ? 'stimato dall\'audio (controlla: può uscire il doppio o la metà)' : 'da Deezer';
     }
-    showSrc();
+    showSrc(); checkWarnings();
     var pct = Math.round((j.score || 0) * 100);
     var html = '<div><span class="ok">Riconosciuta</span> · <span class="t">' + esc(j.title) + '</span> — ' + esc(j.artist) +
       ' <span class="dim">· testo uguale al ' + pct + '%' + (j.bpm ? '' : ' · BPM non trovato') + '</span></div>';
@@ -321,25 +359,61 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     showIdent(''); update(); $('raw').focus();
   }
 
-  function send(url, label) {
+  function renderBatch() {
+    $('batchbox').hidden = !batch.length;
+    $('bn').textContent = batch.length;
+    $('batch').innerHTML = batch.map(function (b, i) {
+      return '<div class="q"><div><b>' + esc(b.title) + '</b> <span>' + esc(b.artist || '') + '</span></div>' +
+        '<button title="Toglila dalla lista" data-i="' + i + '">✕</button></div>';
+    }).join('');
+  }
+  $('batch').addEventListener('click', function (ev) {
+    var i = ev.target.getAttribute && ev.target.getAttribute('data-i');
+    if (i !== null && i !== undefined) { batch.splice(+i, 1); saveBatch(); renderBatch(); checkWarnings(); }
+  });
+  // il modulo è «in uso» se c'è del testo o un titolo: allora conta anche lui nell'invio
+  function formInUse() { return $('raw').value.trim() || $('f-title').value.trim(); }
+
+  $('add').addEventListener('click', function () {
     var s = buildSong(); if (!s) return;
+    batch.push(s); saveBatch(); renderBatch(); reset();
+    msg('«' + s.title + '» è nella lista. Prepara il prossimo, poi invia tutto insieme.', 'ok');
+  });
+
+  function send(url, label) {
+    var list = batch.slice();
+    if (formInUse() || !list.length) { var s = buildSong(); if (!s) return; list.push(s); }
     msg('Invio…');
-    post(url, { songs: [s] }).then(function (r) {
-      if (r.ok) { msg(label(s), 'ok'); reset(); refresh(); }
-      else msg((r.j && (r.j.message || r.j.error)) || 'Errore', 'err');
+    post(url, { songs: list }).then(function (r) {
+      if (r.ok) {
+        var skipped = (r.j && r.j.skipped) || [];
+        msg(label(list, (r.j && r.j.queued != null) ? r.j.queued : list.length) +
+          (skipped.length ? ' Già in coda, saltati: ' + skipped.join(', ') + '.' : ''), 'ok');
+        batch = []; saveBatch(); renderBatch(); reset(); refresh();
+      } else msg((r.j && (r.j.message || r.j.error)) || 'Errore', 'err');
     }).catch(function () { msg('Il server del PC non risponde: è ancora aperto?', 'err'); });
   }
   $('send').addEventListener('click', function () {
-    send('/api/queue', function (s) { return '«' + s.title + '» è in coda. Sul telefono tocca Scarica.'; });
+    send('/api/queue', function (l, n) { return (l.length === 1 ? '«' + l[0].title + '» è in coda' : n + ' brani in coda') + '. Sul telefono tocca Scarica.'; });
   });
   $('cable').addEventListener('click', function () {
-    send('/api/adb-send', function (s) { return '«' + s.title + '» inviato: guarda il telefono.'; });
+    send('/api/adb-send', function (l) { return (l.length === 1 ? '«' + l[0].title + '» inviato' : l.length + ' brani inviati') + ': guarda il telefono.'; });
   });
   $('clear').addEventListener('click', function () { reset(); msg(''); });
 
   function refresh() {
     fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
       audioOk = !!s.bpmAudio;
+      library = s.library || []; checkWarnings();
+      $('sentbox').hidden = !(s.sent && s.sent.length);
+      var fmt = function (t) { return new Date(t * 1000).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+      $('sent').innerHTML = (s.sent || []).map(function (e) {
+        return '<div class="q"><div><b>' + esc(e.title) + '</b> <span>' + esc(e.artist || '') + '</span></div>' +
+          '<span style="margin-left:auto">' + fmt(e.at) + '</span></div>';
+      }).join('');
+      $('bk').textContent = s.backup
+        ? 'Ultima copia di sicurezza dal telefono: ' + fmt(s.backup)
+        : 'Nessuna copia di sicurezza dal telefono ancora: arriva da sola quando apri Backline con la Wi-Fi.';
       $('addr').textContent = s.ip + ':' + s.port; $('code').textContent = s.code;
       $('conn').textContent = s.adb === null ? 'adb non trovato'
         : s.adb.length ? 'Telefono collegato via cavo ✓' : 'Nessun cavo collegato';
@@ -356,7 +430,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
     if (id) post('/api/queue/remove', { id: id }).then(refresh);
   });
 
-  update(); refresh(); setInterval(refresh, 5000);
+  renderBatch(); update(); refresh(); setInterval(refresh, 5000);
 })();
 </script>
 </body>

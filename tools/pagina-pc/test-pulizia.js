@@ -94,6 +94,36 @@ t('tonalità dedotta dagli accordi quando manca la testata', () => {
   assert.strictEqual(PC.inferKey('[A]'), '');
 });
 
+t('i crediti prima della prima sezione si tolgono, quelli dentro il testo no', () => {
+  const r = PC.toChordPro('Tuning: E A D G B ECapo: No capo\n\nWords & Music by Debbie Harry, 1978.\n\n[Verse 1]\nD\nOne way or another\n\n[Chorus]\nG\nWords by the river');
+  assert.ok(r.body.indexOf('Words & Music') < 0, r.body);
+  assert.ok(r.body.indexOf('Words by the river') >= 0, r.body);
+  assert.strictEqual(r.removed.header, 1);
+  assert.strictEqual(r.removed.junk, 1);
+  // senza sezioni non si tocca niente: la prima riga potrebbe essere cantata
+  assert.ok(PC.toChordPro('Written by hand\nAm\nCiao ciao').body.indexOf('Written by hand') >= 0);
+});
+
+t('il % nelle righe a battute diventa la battuta precedente', () => {
+  assert.strictEqual(PC.expandRepeats('| D | % | % | D    D C# C | B5 | % | % | B   B C C# |'),
+    '| D | D | D | D    D C# C | B5 | B5 | B5 | B   B C C# |');
+  assert.strictEqual(PC.expandRepeats('| D    D C# C | % | G |'), '| D    D C# C | D    D C# C | G |');
+  assert.strictEqual(PC.expandRepeats('| % | D |'), '| % | D |');             // niente prima: resta
+  assert.strictEqual(PC.expandRepeats('100% sicuro | davvero'), '100% sicuro | davvero');
+  const b = PC.toChordPro('[Intro]\n| D | % | % | G |\n\n[Verse]\nD\nCiao').body;
+  assert.ok(b.indexOf('| [D] | [D] | [D] | [G] |') >= 0, b);
+  assert.ok(b.indexOf('%') < 0, b);
+});
+
+t('accordi insoliti per la tonalità', () => {
+  assert.deepStrictEqual(PC.suspectChords('[C]x [F]x [G]x [Bb]x [Am]x', 'C'), []);          // Bb = bVII, si perdona
+  assert.deepStrictEqual(PC.suspectChords('[C]x [F#]x [G]x [Dbm7]x', 'C'), ['F#', 'Dbm7']);
+  assert.deepStrictEqual(PC.suspectChords('[Am]x [E7]x [G]x [Dm]x', 'Am'), []);              // V maggiore nel minore
+  assert.deepStrictEqual(PC.suspectChords('[Am]x [C#/G#]x', 'Am'), ['C#/G#']);
+  assert.deepStrictEqual(PC.suspectChords('[A]x [Eb]x', ''), []);                             // senza tonalità non si giudica
+  assert.deepStrictEqual(PC.suspectChords('[Am]x [Eb]x', 'Am Capo 2'), ['Eb']);
+});
+
 t('un testo vuoto non rompe niente', () => {
   const r = PC.toChordPro('');
   assert.strictEqual(r.body, '');

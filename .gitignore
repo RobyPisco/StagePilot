@@ -8,3 +8,5 @@ local.properties
 dist/
 tools/pagina-pc/stato.json
 __pycache__/
+tools/pagina-pc/backup/
+backup-tablet/

@@ -18,6 +18,22 @@
   ];
   var SECTION = /^\s*\[([^\[\]]+)\]\s*$/;
 
+  /** In una riga a battute `| D | % | % | G |` il `%` vuol dire «come la battuta prima»: lo si scrive per esteso,
+   *  così in live si legge D D D G e non c'è niente da interpretare. */
+  function expandRepeats(line) {
+    if (!/^\s*\|.*\|\s*$/.test(line) || !/(^|\|)\s*%\s*(\||$)/.test(line)) return line;
+    var cells = line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (c) { return c.trim(); });
+    var prev = '';
+    cells = cells.map(function (c) {
+      if (c === '%' && prev) return prev;
+      if (c && c !== '%') prev = c;
+      return c;
+    });
+    return '| ' + cells.join(' | ') + ' |';
+  }
+
+  var CREDIT = /^\s*(words|music|lyrics|written|composed|arranged|transcribed|tabbed)\b.*\b(by|:)/i;
+
   /** Toglie dal testo grezzo tutto quello che non è testo e accordi. Non converte ancora in ChordPro.
    *  Ritorna { text, meta:{key,capo,title,artist}, removed:{tab,header,junk,emptySections} }. */
   function cleanRaw(raw, opt) {
@@ -26,6 +42,11 @@
     var removed = { tab: 0, header: 0, junk: 0, emptySections: 0 };
     var meta = {};
     var keep = [];
+    var lines = String(raw || '').replace(/\r\n?/g, '\n').split('\n');
+    // i crediti ("Words & Music by…") si tolgono solo prima della prima sezione, e solo se le sezioni ci sono:
+    // in un testo senza intestazioni la prima riga potrebbe essere cantata
+    var hasSection = lines.some(function (l) { return SECTION.test(l); });
+    var seenSection = false;
 
     String(raw || '').replace(/\r\n?/g, '\n').split('\n').forEach(function (l) {
       if (HEADER.test(l)) {
@@ -42,9 +63,11 @@
         else if (n === 'capo' && !meta.capo) meta.capo = v;
         removed.header++; return;
       }
+      if (SECTION.test(l)) seenSection = true;
+      if (hasSection && !seenSection && CREDIT.test(l)) { removed.junk++; return; }
       for (var i = 0; i < JUNK.length; i++) if (JUNK[i].test(l)) { removed.junk++; return; }
       if (dropTab && isTabLine(l)) { removed.tab++; return; }
-      keep.push(l.replace(/\s+$/, ''));
+      keep.push(expandRepeats(l.replace(/\s+$/, '')));
     });
 
     // sezioni rimaste vuote (erano solo tablatura): via l'intestazione
@@ -158,7 +181,21 @@
     return (flat ? NAMES_FLAT : NAMES_SHARP)[best.root] + (best.minor ? 'm' : '');
   }
 
-  var api = { cleanRaw: cleanRaw, toChordPro: toChordPro, lyricLines: lyricLines, guessTitles: guessTitles,
+  /** Accordi che non c'entrano con la tonalità (di solito un errore del tab: ne è pieno il web).
+   *  Si perdonano i prestiti più comuni (bIII, bVI, bVII, iv; nel minore V maggiore e IV). */
+  function suspectChords(body, key) {
+    var k = parseChord(String(key || '').trim().replace(/^([A-G][#b]?)\s*(.*)$/, function (_, r, rest) { return r + (/^m(?!aj)|^min/i.test(rest) ? 'm' : ''); }));
+    if (!k || k.pc === undefined) return [];
+    var ok = (k.minor ? [0, 2, 3, 5, 7, 8, 10, 9, 11] : [0, 2, 4, 5, 7, 9, 11, 3, 8, 10]).map(function (d) { return (k.pc + d) % 12; });
+    var bad = [];
+    (String(body || '').match(/\[([^\]]+)\]/g) || []).forEach(function (s) {
+      var name = s.slice(1, -1), c = parseChord(name.split('/')[0]);
+      if (c && c.pc !== undefined && ok.indexOf(c.pc) < 0 && bad.indexOf(name) < 0) bad.push(name);
+    });
+    return bad;
+  }
+
+  var api = { expandRepeats: expandRepeats, suspectChords: suspectChords, cleanRaw: cleanRaw, toChordPro: toChordPro, lyricLines: lyricLines, guessTitles: guessTitles,
               inferKey: inferKey, isTabLine: isTabLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PC = api;
 })(typeof window !== 'undefined' ? window : globalThis);
