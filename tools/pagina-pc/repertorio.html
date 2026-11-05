@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backline · Repertorio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pitch:#0E0D0B;--panel:#171512;--raise:#211E19;--line:#2E2A23;--outline:#3F392F;--amber:#FFB000;--on-amber:#1A1200;--ink:#EDE7DA;--dim:#A39A8B;--warn:#FF6B6B;--ok:#6FD08C;
+  --sans:"IBM Plex Sans Condensed","Segoe UI",system-ui,sans-serif;--mono:"IBM Plex Mono",Consolas,ui-monospace,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--pitch);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.4}
+header{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2}
+header b{color:var(--amber);letter-spacing:.2em;font-size:13px;text-transform:uppercase}
+header a{color:var(--dim);text-decoration:none;padding:4px 10px;border-radius:99px}
+header a.on{background:var(--raise);color:var(--ink)}
+header a:hover{color:var(--ink)}
+#conn{margin-left:auto;font-size:14px;color:var(--dim)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:24px;padding:24px;max-width:1400px;margin:0 auto}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+h2{font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:18px}
+label{display:block;font-size:13px;color:var(--dim);margin-bottom:4px}
+input,textarea,select{width:100%;background:var(--pitch);color:var(--ink);border:1px solid var(--outline);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--amber);outline-offset:-1px;border-color:var(--amber)}
+textarea{font-family:var(--mono);font-size:13.5px;min-height:220px;resize:vertical;white-space:pre;overflow:auto;line-height:1.35}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.c2{grid-column:span 3}.c3{grid-column:span 2}.c6{grid-column:span 6}
+button{font:inherit;cursor:pointer;border-radius:10px}
+.btn{background:none;color:var(--ink);border:1px solid var(--outline);padding:10px 14px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.btn:hover{border-color:var(--amber)}
+.btn.danger{color:var(--warn)}
+.btn.danger:hover{border-color:var(--warn)}
+.primary{background:var(--amber);color:var(--on-amber);border:0;font-size:15px;font-weight:700;padding:13px 20px}
+.primary:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hint{font-size:12px;color:var(--dim);margin-top:3px}
+.ok{color:var(--ok)}.err{color:var(--warn)}.dim{color:var(--dim)}
+.empty{color:var(--dim);font-size:15px;padding:6px 0}
+#songs{max-height:520px;overflow:auto;margin-top:10px;border-top:1px solid var(--line)}
+.s{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+.s:hover{background:var(--raise)}
+.s.sel{background:var(--raise);box-shadow:inset 3px 0 var(--amber)}
+.s .t{font-weight:600}.s .a{color:var(--dim);font-size:14px}
+.s .m{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap}
+.s.del .t{text-decoration:line-through;color:var(--warn)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex:none}
+.it{display:flex;align-items:center;gap:8px;padding:8px 6px;border-bottom:1px solid var(--line);background:var(--panel)}
+.it.mark{background:var(--raise);font-style:italic;color:var(--dim)}
+.it.over{box-shadow:inset 0 2px var(--amber)}
+.it .g{cursor:grab;color:var(--dim);font-size:18px;padding:0 4px;user-select:none}
+.it .n{color:var(--amber);font-family:var(--mono);width:24px;text-align:right}
+.it .l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it button{background:none;border:0;color:var(--dim);font-size:16px;padding:2px 7px}
+.it button:hover{color:var(--ink)}
+.it button.x:hover{color:var(--warn)}
+.it button:disabled{opacity:.25;cursor:default}
+code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radius:6px;color:var(--amber)}
+#msg{min-height:22px;font-size:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<header><b>Backline</b><a href="/">Nuovo brano</a><a class="on" href="/repertorio.html">Repertorio</a><div id="conn">…</div></header>
+
+<main>
+  <div class="stack">
+    <div class="card">
+      <h2>Brani del telefono</h2>
+      <div id="nolib" class="empty" hidden>Il telefono non ha ancora mandato una copia del repertorio. Su Backline, in <b>Impostazioni → Brani dal PC</b>, metti indirizzo e codice (mostrati nella pagina «Nuovo brano»): alla prossima apertura dell'app con la Wi-Fi la copia arriva qui.</div>
+      <div id="libbox" hidden>
+        <input id="q" placeholder="Cerca titolo, artista o tag" autocomplete="off">
+        <div class="hint" id="count"></div>
+        <div id="songs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card" id="edit" hidden>
+      <h2>Il brano</h2>
+      <div class="grid">
+        <div class="c3"><label for="f-title">Titolo</label><input id="f-title" autocomplete="off"></div>
+        <div class="c3"><label for="f-artist">Artista</label><input id="f-artist" autocomplete="off"></div>
+        <div class="c2"><label for="f-key">Tonalità</label><input id="f-key" placeholder="Am, C, F#m…" autocomplete="off"></div>
+        <div class="c2"><label for="f-bpm">BPM</label><input id="f-bpm" inputmode="numeric" autocomplete="off"><div class="hint" id="bpmmsg"></div></div>
+        <div class="c2"><label for="f-dur">Durata</label><input id="f-dur" placeholder="3:40" autocomplete="off"></div>
+        <div class="c6"><label for="f-tags">Tag</label><input id="f-tags" placeholder="cover, lenta" autocomplete="off"></div>
+        <div class="c6"><label for="f-body">Testo e accordi (ChordPro)</label><textarea id="f-body" spellcheck="false"></textarea></div>
+        <div class="c6 row">
+          <button class="btn" id="bpm" type="button" title="Cerca BPM e durata su songbpm.com con il titolo e l'artista">Cerca BPM e durata</button>
+          <button class="btn danger" id="del" type="button" style="margin-left:auto">Elimina dal repertorio</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="setcard" hidden>
+      <h2>Scaletta</h2>
+      <div class="row"><select id="set" style="flex:1"></select></div>
+      <div class="hint" id="setinfo" style="margin:6px 0 8px"></div>
+      <div id="items"></div>
+      <div class="row" style="margin-top:12px">
+        <select id="addsong" style="flex:1;min-width:180px"></select>
+        <button class="btn" id="addsongb" type="button">+ Brano</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="mlabel" placeholder="Pausa, Discorso…" value="Pausa" style="flex:1;min-width:140px" autocomplete="off">
+        <input id="mdur" placeholder="5:00" style="width:90px" autocomplete="off">
+        <button class="btn" id="addmark" type="button">+ Segnaposto</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Al tablet</h2>
+      <div id="sum" class="empty">Nessuna modifica.</div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="send" type="button" disabled>Invia (Wi-Fi)</button>
+        <button class="btn" id="cable" type="button" disabled>Via cavo (adb)</button>
+        <button class="btn" id="drop" type="button" disabled>Scarta le modifiche</button>
+      </div>
+      <div id="msg"></div>
+      <div class="hint" style="margin-top:10px">Sul tablet compare una conferma: vedi cosa cambia e scegli se applicarlo. Se sul tablet hai cambiato una scaletta dopo l'ultima copia letta da qui, quella scaletta resta com'è.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var lib = null;            // il repertorio letto dal backup del telefono
+  var dirty = { songs: {}, del: {}, sets: {} };   // le modifiche non ancora inviate
+  var sel = null;            // brano aperto
+  var curSet = null;         // scaletta aperta
+  var loadedAt = 0, sentOnce = false;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function secs(t) { var m = /^(\d+):(\d{2})$/.exec(String(t || '').trim()); return m ? (+m[1]) * 60 + (+m[2]) : 0; }
+  function mmss(n) { n = Math.round(n); return n >= 3600 ? Math.floor(n / 3600) + ':' + ('0' + Math.floor(n % 3600 / 60)).slice(-2) + ':' + ('0' + n % 60).slice(-2) : Math.floor(n / 60) + ':' + ('0' + n % 60).slice(-2); }
+  function msg(t, cls) { $('msg').className = cls || ''; $('msg').textContent = t || ''; }
+
+  function original(id) { return lib.songs.filter(function (s) { return s.id === id; })[0]; }
+  function view(id) {            // il brano com'è con le modifiche
+    var o = original(id); if (!o) return null;
+    var v = {}; Object.keys(o).forEach(function (k) { v[k] = o[k]; });
+    var d = dirty.songs[id] || {}; Object.keys(d).forEach(function (k) { v[k] = d[k]; });
+    return v;
+  }
+  function sig(it) { return it.type === 'mark' ? 'mark:' + (it.label || '') + '|' + (it.dur || '') : 'song:' + (it.id || ''); }
+  function setById(id) { return lib.sets.filter(function (s) { return s.id === id; })[0]; }
+  function items() { return dirty.sets[curSet] || (setById(curSet) ? setById(curSet).items : []); }
+
+  // ── elenco dei brani ──
+  function renderSongs() {
+    var q = $('q').value.trim().toLowerCase();
+    var list = lib.songs.filter(function (s) {
+      return !q || (s.title || '').toLowerCase().indexOf(q) >= 0 || (s.artist || '').toLowerCase().indexOf(q) >= 0 ||
+        (s.tags || []).some(function (t) { return t.indexOf(q) >= 0; });
+    }).sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'it'); });
+    $('count').textContent = list.length + ' di ' + lib.songs.length + ' brani';
+    $('songs').innerHTML = list.map(function (s) {
+      var v = view(s.id);
+      var ch = dirty.songs[s.id] && Object.keys(dirty.songs[s.id]).length;
+      return '<div class="s' + (s.id === sel ? ' sel' : '') + (dirty.del[s.id] ? ' del' : '') + '" data-id="' + esc(s.id) + '">' +
+        (ch || dirty.del[s.id] ? '<span class="dot" title="modificato"></span>' : '') +
+        '<div><div class="t">' + esc(v.title) + '</div><div class="a">' + esc(v.artist) + '</div></div>' +
+        '<div class="m">' + esc([v.key, v.bpm ? v.bpm + ' bpm' : '', v.dur].filter(Boolean).join(' · ')) + '</div></div>';
+    }).join('') || '<div class="empty">Nessun brano.</div>';
+  }
+  $('songs').addEventListener('click', function (ev) {
+    var r = ev.target.closest('.s'); if (!r) return;
+    sel = r.getAttribute('data-id'); openSong(); renderSongs();
+  });
+  $('q').addEventListener('input', renderSongs);
+
+  // ── modifica di un brano ──
+  var FIELDS = ['title', 'artist', 'key', 'bpm', 'dur', 'tags', 'body'];
+  function openSong() {
+    var v = view(sel); if (!v) { $('edit').hidden = true; return; }
+    $('edit').hidden = false;
+    $('f-title').value = v.title || ''; $('f-artist').value = v.artist || ''; $('f-key').value = v.key || '';
+    $('f-bpm').value = v.bpm || ''; $('f-dur').value = v.dur || ''; $('f-tags').value = (v.tags || []).join(', ');
+    $('f-body').value = v.body || '';
+    $('bpmmsg').textContent = '';
+    $('del').textContent = dirty.del[sel] ? 'Annulla l\'eliminazione' : 'Elimina dal repertorio';
+  }
+  function setField(name, val) {
+    var o = original(sel), same = JSON.stringify(val) === JSON.stringify(o[name] == null ? (name === 'tags' ? [] : '') : o[name]);
+    if (name === 'bpm') same = (val || 0) === (o.bpm || 0);
+    var d = dirty.songs[sel] = dirty.songs[sel] || {};
+    if (same) delete d[name]; else d[name] = val;
+    if (!Object.keys(d).length) delete dirty.songs[sel];
+    refresh();
+  }
+  var read = {
+    title: function () { return $('f-title').value.trim(); }, artist: function () { return $('f-artist').value.trim(); },
+    key: function () { return $('f-key').value.trim(); }, dur: function () { return $('f-dur').value.trim(); },
+    bpm: function () { var n = parseInt($('f-bpm').value, 10); return n >= 20 && n <= 400 ? n : 0; },
+    tags: function () { return $('f-tags').value.split(',').map(function (t) { return t.trim().toLowerCase(); }).filter(Boolean); },
+    body: function () { return $('f-body').value; }
+  };
+  FIELDS.forEach(function (n) { $('f-' + n).addEventListener('input', function () { if (sel) setField(n, read[n]()); }); });
+  $('del').addEventListener('click', function () {
+    if (!sel) return;
+    if (dirty.del[sel]) delete dirty.del[sel]; else dirty.del[sel] = true;
+    openSong(); refresh();
+  });
+  $('bpm').addEventListener('click', function () {
+    var v = view(sel); if (!v) return;
+    $('bpmmsg').textContent = 'Cerco…';
+    fetch('/api/bpm', { method: 'POST', body: JSON.stringify({ title: v.title, artist: v.artist }) })
+      .then(function (r) { return r.json(); }).then(function (j) {
+        if (!j.found) { $('bpmmsg').textContent = j.error || 'Non trovato su SongBPM.'; return; }
+        $('f-bpm').value = j.bpm; setField('bpm', j.bpm);
+        if (j.dur) { $('f-dur').value = j.dur; setField('dur', j.dur); }
+        $('bpmmsg').textContent = 'Da SongBPM: ' + j.bpm + ' BPM' + (j.dur ? ', ' + j.dur : '') + '. Controlla.';
+      }).catch(function () { $('bpmmsg').textContent = 'Il server non risponde.'; });
+  });
+
+  // ── scaletta ──
+  function renderSets() {
+    $('setcard').hidden = !lib.sets.length;
+    $('set').innerHTML = lib.sets.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === curSet ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('');
+    renderItems();
+  }
+  function renderItems() {
+    if (!curSet) return;
+    var its = items(), total = 0, n = 0;
+    $('items').innerHTML = its.map(function (it, i) {
+      if (it.type === 'mark') { total += secs(it.dur); return row(i, '', '<span class="l">' + esc(it.label || 'Pausa') + (it.dur ? ' · ' + esc(it.dur) : '') + '</span>', 'mark', its.length); }
+      if (dirty.del[it.id]) return row(i, '', '<span class="l err" style="text-decoration:line-through">' + esc((view(it.id) || {}).title) + '</span><span class="dim">sarà eliminato</span>', 'mark', its.length);
+      var v = view(it.id); n++; total += v ? secs(v.dur) : 0;
+      return row(i, n, '<span class="l">' + (v ? esc(v.title) + ' <span class="dim">' + esc(v.artist) + '</span>' : '<span class="err">brano non trovato</span>') + '</span>', '', its.length);
+    }).join('') || '<div class="empty">Scaletta vuota.</div>';
+    $('setinfo').textContent = n + (n === 1 ? ' brano' : ' brani') + ' · ' + mmss(total) + (dirty.sets[curSet] ? ' · modificata' : '');
+    var used = {}; its.forEach(function (it) { if (it.type === 'song') used[it.id] = 1; });
+    $('addsong').innerHTML = '<option value="">Aggiungi un brano…</option>' + lib.songs.filter(function (s) { return !used[s.id] && !dirty.del[s.id]; })
+      .sort(function (a, b) { return (a.title || '').localeCompare(b.title || '', 'it'); })
+      .map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.title) + (s.artist ? ' — ' + esc(s.artist) : '') + '</option>'; }).join('');
+  }
+  function row(i, num, inner, cls, len) {
+    return '<div class="it ' + cls + '" draggable="true" data-i="' + i + '"><span class="g" title="Trascina">≡</span><span class="n">' + num + '</span>' + inner +
+      '<button data-a="up" ' + (i === 0 ? 'disabled' : '') + ' title="Su">▲</button><button data-a="dn" ' + (i === len - 1 ? 'disabled' : '') + ' title="Giù">▼</button>' +
+      '<button class="x" data-a="rm" title="Togli dalla scaletta">✕</button></div>';
+  }
+  function edited(fn) {
+    var cur = items().map(function (x) { return JSON.parse(JSON.stringify(x)); });
+    fn(cur);
+    var o = setById(curSet).items;
+    if (cur.map(sig).join('\n') === o.map(sig).join('\n')) delete dirty.sets[curSet]; else dirty.sets[curSet] = cur;
+    renderItems(); refresh();
+  }
+  function move(from, to) { edited(function (a) { if (to < 0 || to >= a.length) return; a.splice(to, 0, a.splice(from, 1)[0]); }); }
+  $('set').addEventListener('change', function () { curSet = $('set').value; renderItems(); });
+  $('items').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    var i = +b.parentNode.getAttribute('data-i'), a = b.getAttribute('data-a');
+    if (a === 'up') move(i, i - 1); else if (a === 'dn') move(i, i + 1);
+    else if (a === 'rm') edited(function (x) { x.splice(i, 1); });
+  });
+  var dragFrom = null;
+  $('items').addEventListener('dragstart', function (ev) { var r = ev.target.closest('.it'); if (!r) return; dragFrom = +r.getAttribute('data-i'); ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', String(dragFrom)); } catch (e) {} });
+  $('items').addEventListener('dragover', function (ev) {
+    var r = ev.target.closest('.it'); if (!r || dragFrom === null) return;
+    ev.preventDefault();
+    Array.prototype.forEach.call($('items').children, function (c) { c.classList.remove('over'); }); r.classList.add('over');
+  });
+  $('items').addEventListener('drop', function (ev) {
+    var r = ev.target.closest('.it'); if (!r || dragFrom === null) return;
+    ev.preventDefault(); var to = +r.getAttribute('data-i'), from = dragFrom; dragFrom = null; move(from, to);
+  });
+  $('items').addEventListener('dragend', function () { dragFrom = null; Array.prototype.forEach.call($('items').children, function (c) { c.classList.remove('over'); }); });
+  $('addsongb').addEventListener('click', function () { var id = $('addsong').value; if (id) edited(function (a) { a.push({ type: 'song', id: id }); }); });
+  $('addmark').addEventListener('click', function () {
+    var l = $('mlabel').value.trim() || 'Pausa', d = $('mdur').value.trim();
+    if (d && !secs(d)) { msg('La durata va scritta come 5:00.', 'err'); return; }
+    msg(''); edited(function (a) { a.push({ type: 'mark', label: l, dur: d }); }); $('mdur').value = '';
+  });
+
+  // ── invio ──
+  function build() {
+    var band = lib.band.id, out = [];
+    Object.keys(dirty.songs).forEach(function (id) {
+      if (dirty.del[id]) return;
+      var e = { op: 'song', band: band, id: id }, d = dirty.songs[id];
+      Object.keys(d).forEach(function (k) { e[k] = d[k]; });
+      out.push(e);
+    });
+    Object.keys(dirty.del).forEach(function (id) { out.push({ op: 'delete', band: band, id: id, title: (original(id) || {}).title }); });
+    Object.keys(dirty.sets).forEach(function (id) {
+      out.push({ op: 'items', band: band, id: id, base: setById(id).items.map(sig), items: dirty.sets[id] });
+    });
+    return out;
+  }
+  function refresh() {
+    renderSongs(); if (curSet) renderItems();
+    var ns = Object.keys(dirty.songs).filter(function (id) { return !dirty.del[id]; }).length, nd = Object.keys(dirty.del).length, nt = Object.keys(dirty.sets).length;
+    var parts = [];
+    if (ns) parts.push(ns + (ns === 1 ? ' brano corretto' : ' brani corretti'));
+    if (nd) parts.push('<span class="err">' + nd + (nd === 1 ? ' brano da eliminare' : ' brani da eliminare') + '</span>');
+    if (nt) parts.push(nt + (nt === 1 ? ' scaletta modificata' : ' scalette modificate'));
+    $('sum').className = parts.length ? '' : 'empty';
+    $('sum').innerHTML = parts.length ? parts.join(' · ') : 'Nessuna modifica.';
+    ['send', 'cable', 'drop'].forEach(function (id) { $(id).disabled = !parts.length; });
+  }
+  function post(url, data) {
+    return fetch(url, { method: 'POST', body: JSON.stringify(data) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+  $('send').addEventListener('click', function () {
+    post('/api/edits', { edits: build() }).then(function (r) {
+      if (!r.ok) return msg((r.j && r.j.error) || 'Non riuscito', 'err');
+      sentOnce = true;
+      msg('In coda: ' + r.j.queued + '. Sul tablet apri Backline (o Impostazioni → Scarica) e conferma.', 'ok');
+    }).catch(function () { msg('Il server del PC non risponde.', 'err'); });
+  });
+  $('cable').addEventListener('click', function () {
+    msg('Invio…');
+    post('/api/adb-send-edits', { edits: build() }).then(function (r) {
+      msg((r.j && (r.j.message || r.j.error)) || '', r.ok ? 'ok' : 'err'); if (r.ok) sentOnce = true;
+    }).catch(function () { msg('Il server del PC non risponde.', 'err'); });
+  });
+  $('drop').addEventListener('click', function () {
+    if (!confirm('Scartare tutte le modifiche non inviate?')) return;
+    dirty = { songs: {}, del: {}, sets: {} }; msg(''); if (sel) openSong(); refresh();
+  });
+
+  // ── caricamento ──
+  function load() {
+    return fetch('/api/library').then(function (r) { return r.json(); }).then(function (j) {
+      if (j.empty) { $('nolib').hidden = false; $('libbox').hidden = true; return; }
+      lib = j; loadedAt = j.backup;
+      $('nolib').hidden = true; $('libbox').hidden = false;
+      if (!curSet || !setById(curSet)) curSet = j.cur && setById(j.cur) ? j.cur : (j.sets[0] && j.sets[0].id);
+      if (sel && !original(sel)) { sel = null; $('edit').hidden = true; }
+      renderSets(); refresh();
+    });
+  }
+  function poll() {
+    fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
+      var when = s.backup ? new Date(s.backup * 1000).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+      $('conn').textContent = (when ? 'Copia del tablet: ' + when : 'Nessuna copia dal tablet') + (s.edits && s.edits.length ? ' · ' + s.edits.length + ' modifiche in coda' : '');
+      // il tablet ha preso le modifiche e ha mandato una copia nuova: si ricarica e le modifiche inviate non servono più
+      if (lib && s.backup && s.backup > loadedAt && !(s.edits && s.edits.length)) {
+        if (sentOnce) { dirty = { songs: {}, del: {}, sets: {} }; sentOnce = false; msg('Il tablet ha applicato le modifiche.', 'ok'); }
+        if (!Object.keys(dirty.songs).length && !Object.keys(dirty.del).length && !Object.keys(dirty.sets).length) load().then(function () { if (sel) openSong(); });
+      }
+      if (!lib && s.backup) load();
+    }).catch(function () { $('conn').textContent = 'Il server non risponde'; });
+  }
+  load().then(function () { if (!lib) return; }); poll(); setInterval(poll, 5000);
+})();
+</script>
+</body>
+</html>

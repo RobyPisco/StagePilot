@@ -71,6 +71,13 @@ class Store(context: Context) {
     }
 
     /** Cancella il brano dal repertorio e da tutte le scalette. */
+    /** Applica le modifiche arrivate dal PC. Ritorna quante sono andate a buon fine e quali si sono saltate. */
+    fun applyPcEdits(edits: List<PcEdit>): EditsResult {
+        var result: EditsResult? = null
+        update { db -> applyEdits(db, edits).also { result = it }.db }
+        return result!!
+    }
+
     fun deleteSong(id: String) = updateBand { b ->
         b.copy(
             songs = b.songs.filterNot { it.id == id },

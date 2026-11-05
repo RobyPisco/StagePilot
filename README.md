@@ -66,7 +66,7 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
    scrivi titolo, artista, BPM (c'è anche «Batti» per battere il tempo), durata, tag e nota, e vedi subito
    l'anteprima come si leggerà in live (la conversione è quella dell'app web, compilata con esbuild:
    `entry.ts` → `convert.bundle.js`). Poi due pulsanti:
-   - **Invia (Wi-Fi):** il brano va in una coda sul PC. In Backline, *tocca il nome del gruppo → Brani dal PC*,
+   - **Invia (Wi-Fi):** il brano va in una coda sul PC. In Backline, *Impostazioni → Brani dal PC*,
      scrivi una volta sola indirizzo e codice (li mostra la pagina) e tocca Scarica; l'app poi controlla da sola
      a ogni apertura. Telefono e PC devono stare sulla stessa rete. La coda si legge solo con il codice.
    - **Via cavo (adb):** il brano arriva subito, con il telefono collegato.
@@ -113,6 +113,24 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
 
 Le righe di tablatura per chitarra (`e|---0---|`) restano com'erano, a spaziatura fissa; chi canta, con
 "Solo testo", non le vede.
+
+## Gestire il repertorio dal PC
+
+La pagina del PC ha una seconda scheda, **Repertorio** (`http://localhost:8765/repertorio.html`). Mostra i brani e le
+scalette del tablet, come stavano all'ultimo backup che il tablet ha mandato al PC (serve aver messo indirizzo e codice
+in Impostazioni → Brani dal PC):
+
+- **Correggere un brano:** titolo, artista, tonalità, BPM, durata, tag e testo ChordPro. «Cerca BPM e durata» li prende
+  da SongBPM.
+- **Eliminare** un brano dal repertorio (si può annullare finché non si invia).
+- **Riordinare una scaletta:** trascinando le righe (o con le frecce), togliendo voci, aggiungendo brani e segnaposto
+  (Pausa, Discorso…) nel punto che vuoi.
+- **Inviare:** *Invia (Wi-Fi)* mette le modifiche in coda, *Via cavo (adb)* le manda subito. Con telefono e tablet
+  collegati insieme, adb sceglie il dispositivo che ha Backline.
+
+Sul tablet compare **«Modifiche dal PC»** con l'elenco di cosa cambia (le eliminazioni in rosso): non si applica niente
+senza il tuo «Applica». Per prudenza una scaletta che sul tablet è cambiata dopo l'ultimo backup letto dal PC non si
+sovrascrive, e un brano sparito nel frattempo si salta: l'app lo dice.
 
 ## Dati
 

@@ -13,7 +13,7 @@
 body{background:var(--pitch);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.4}
 header{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:2}
 header b{color:var(--amber);letter-spacing:.2em;font-size:13px;text-transform:uppercase}
-header span{color:var(--dim)}
+header a{color:var(--dim);text-decoration:none;padding:4px 10px;border-radius:99px}header a.on{background:var(--raise);color:var(--ink)}header a:hover{color:var(--ink)}
 #conn{margin-left:auto;font-size:14px;color:var(--dim)}
 main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;padding:24px;max-width:1400px;margin:0 auto}
 @media (max-width:980px){main{grid-template-columns:1fr}}
@@ -70,7 +70,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
 </style>
 </head>
 <body>
-<header><b>Backline</b><span>Brani dal PC</span><div id="conn">…</div></header>
+<header><b>Backline</b><a href="/" class="on">Nuovo brano</a><a href="/repertorio.html">Repertorio</a><div id="conn">…</div></header>
 
 <main>
   <div class="stack">
@@ -140,7 +140,7 @@ code{font-family:var(--mono);background:var(--raise);padding:2px 7px;border-radi
       <div id="sentbox" hidden style="margin-top:12px"><h2>Già scaricati dal telefono</h2><div id="sent"></div></div>
       <div id="bk" class="hint" style="margin-top:12px"></div>
       <ol class="steps" style="margin-top:12px">
-        <li>Su Backline: <b>tocca il nome del gruppo → Brani dal PC</b>.</li>
+        <li>Su Backline: <b>Impostazioni → Brani dal PC</b>.</li>
         <li>Indirizzo <code id="addr">…</code> e codice <code id="code">…</code> (una volta sola).</li>
         <li>Tocca <b>Scarica</b>: i brani arrivano, e Backline li controlla ogni volta che si apre.</li>
       </ol>

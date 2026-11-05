@@ -36,6 +36,9 @@ import it.backline.app.data.AutoBackup
 import it.backline.app.data.DB
 import it.backline.app.data.alreadyInBand
 import it.backline.app.data.PcClient
+import it.backline.app.data.summarizeEdits
+import it.backline.app.data.parseEditsPackage
+import it.backline.app.data.PcEdit
 import it.backline.app.data.PcException
 import it.backline.app.data.PcSong
 import it.backline.app.data.SetItem
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
 
     /** Una scaletta arrivata come file, in attesa di conferma. */
     private val incomingSetlist = mutableStateOf<SetlistPackage?>(null)
+    private val incomingEdits = mutableStateOf<List<PcEdit>?>(null)
 
     /** Il testo di un file arrivato da fuori (condiviso o aperto), se si legge e non è enorme. */
     private fun readStream(intent: Intent): String? {
@@ -98,6 +102,8 @@ class MainActivity : ComponentActivity() {
         if (setlist != null) { incomingSetlist.value = setlist; return }
         val songs = parsePcPackage(text)
         if (songs != null) { incomingSongs.value = songs; return }
+        val edits = parseEditsPackage(text)
+        if (edits != null) { incomingEdits.value = edits; return }
         // un file (non testo condiviso) che non è roba di Backline: niente da importare
         if (intent.action == Intent.ACTION_VIEW || intent.type != "text/plain") {
             Toast.makeText(this, "Questo file non è una scaletta di Backline", Toast.LENGTH_LONG).show()
@@ -113,7 +119,7 @@ class MainActivity : ComponentActivity() {
         val store = Store(applicationContext)
         // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
         if (savedInstanceState == null) readShared(intent)
-        setContent { BacklineTheme { App(store, incoming, incomingSongs, incomingSetlist) } }
+        setContent { BacklineTheme { App(store, incoming, incomingSongs, incomingSetlist, incomingEdits) } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -128,10 +134,14 @@ private fun toast(context: Context, msg: String) = Toast.makeText(context, msg, 
 /** Brani in attesa di conferma. `ackIds` sono quelli da togliere dalla coda del PC (vuoto se arrivano da adb). */
 private class PcBatch(val songs: List<PcSong>, val ackIds: List<String>)
 
+/** Modifiche al repertorio in attesa di conferma. `ackIds` sono quelle da togliere dalla coda del PC. */
+private class EditBatch(val edits: List<PcEdit>, val ackIds: List<String>)
+
 @Composable
 private fun App(
     store: Store, incoming: MutableState<String?>, incomingSongs: MutableState<List<PcSong>?>,
     incomingSetlist: MutableState<SetlistPackage?>,
+    incomingEdits: MutableState<List<PcEdit>?>,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -160,6 +170,7 @@ private fun App(
     var pcBusy by remember { mutableStateOf(false) }
     // brani in attesa di conferma (dalla coda del PC o mandati con adb)
     var pendingPc by remember { mutableStateOf<PcBatch?>(null) }
+    var pendingEdits by remember { mutableStateOf<EditBatch?>(null) }
 
     fun fetchPc(silent: Boolean) {
         if (pcAddr.isBlank() || pcCode.isBlank()) {
@@ -169,12 +180,17 @@ private fun App(
         scope.launch {
             pcBusy = true
             try {
-                val songs = PcClient.fetch(pcAddr, pcCode)
-                if (songs.isEmpty()) {
+                val inbox = PcClient.fetch(pcAddr, pcCode)
+                val songs = inbox.songs
+                if (songs.isEmpty() && inbox.edits.isEmpty()) {
                     if (!silent) pcStatus = "Niente di nuovo sul PC."
                 } else {
-                    pendingPc = PcBatch(songs, songs.map { it.id })
-                    pcStatus = "${songs.size} ${if (songs.size == 1) "brano" else "brani"} sul PC."
+                    if (songs.isNotEmpty()) pendingPc = PcBatch(songs, songs.map { it.id })
+                    if (inbox.edits.isNotEmpty()) pendingEdits = EditBatch(inbox.edits, inbox.editIds)
+                    pcStatus = listOfNotNull(
+                        songs.takeIf { it.isNotEmpty() }?.let { "${it.size} ${if (it.size == 1) "brano" else "brani"}" },
+                        inbox.edits.takeIf { it.isNotEmpty() }?.let { "${it.size} ${if (it.size == 1) "modifica" else "modifiche"}" },
+                    ).joinToString(" e ") + " sul PC."
                 }
             } catch (e: PcException) {
                 if (!silent) pcStatus = e.message ?: "Errore"
@@ -206,6 +222,15 @@ private fun App(
         if (sharedSongs != null) {
             pendingPc = PcBatch(sharedSongs, emptyList())
             incomingSongs.value = null
+        }
+    }
+
+    // modifiche mandate con adb: stessa conferma di quelle scaricate
+    val sharedEdits = incomingEdits.value
+    LaunchedEffect(sharedEdits) {
+        if (sharedEdits != null) {
+            pendingEdits = EditBatch(sharedEdits, emptyList())
+            incomingEdits.value = null
         }
     }
 
@@ -384,6 +409,45 @@ private fun App(
                 Text(
                     "Finiscono nel repertorio di «${db.band.name}»" +
                         if (batch.songs.any { it.inSet }) ", e in coda alla scaletta in uso." else ".",
+                    color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp,
+                )
+            }
+        }
+    }
+
+    pendingEdits?.takeIf { pendingPc == null }?.let { batch ->
+        val sum = summarizeEdits(db, batch.edits)
+        PalcoDialog(
+            title = "Modifiche dal PC",
+            confirmText = "Applica",
+            onConfirm = {
+                val r = store.applyPcEdits(batch.edits)
+                scope.launch { runCatching { PcClient.ack(pcAddr, pcCode, batch.ackIds) } }
+                pendingEdits = null
+                pcStatus = ""
+                toast(
+                    context,
+                    if (r.skipped.isEmpty()) "Modifiche applicate"
+                    else "Applicate ${r.applied}; ${r.skipped.size} saltate: ${r.skipped.first()}",
+                )
+            },
+            onDismiss = { pendingEdits = null },
+        ) {
+            androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                if (sum.changed.isNotEmpty()) Text(
+                    "Dati corretti: " + sum.changed.take(6).joinToString(", ") + if (sum.changed.size > 6) " e altri ${sum.changed.size - 6}" else "",
+                    color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp,
+                )
+                if (sum.sets.isNotEmpty()) Text(
+                    "Scaletta riordinata: " + sum.sets.joinToString(", "),
+                    color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp,
+                )
+                if (sum.deleted.isNotEmpty()) Text(
+                    "Da eliminare: " + sum.deleted.take(6).joinToString(", ") + if (sum.deleted.size > 6) " e altri ${sum.deleted.size - 6}" else "",
+                    color = Palco.Warn, fontFamily = Condensed, fontSize = 15.sp,
+                )
+                Text(
+                    "Si applicano al gruppo in uso. Se hai già cambiato qualcosa sul tablet, quella parte resta com'è.",
                     color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp,
                 )
             }

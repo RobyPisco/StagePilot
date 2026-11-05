@@ -40,12 +40,12 @@ object PcClient {
         throw PcException("L'indirizzo non è valido: deve essere come 192.168.178.32:8765")
     }
 
-    suspend fun fetch(address: String, code: String): List<PcSong> = withContext(Dispatchers.IO) {
+    suspend fun fetch(address: String, code: String): PcInbox = withContext(Dispatchers.IO) {
         guard {
             val c = open(address, code, "/api/inbox", post = false)
             try {
                 when (c.responseCode) {
-                    200 -> parsePcInbox(c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
+                    200 -> parsePcInboxFull(c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
                     403 -> throw PcException("Il codice non è giusto: guardalo sulla pagina del PC.")
                     else -> throw PcException("Il PC ha risposto in modo strano (${c.responseCode}).")
                 }
