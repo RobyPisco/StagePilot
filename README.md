@@ -31,6 +31,16 @@ adb shell am start -n it.backline.app/.MainActivity
 
 `minSdk 29` (Android 10). Provata su Fire HD 8 con LineageOS 17.1.
 
+## Dare la scaletta agli altri
+
+**Condividi** (nella scaletta) offre due strade:
+- **File Backline**: un `.json` con i brani, gli accordi, le note e l'ordine (pause comprese). Si manda da qualunque
+  app: WhatsApp, Telegram, posta, Quick Share. Chi lo riceve lo apre con Backline (dalla condivisione, o aprendo il
+  file dal gestore di file): l'app mostra cosa contiene e chiede conferma, poi aggiunge i brani che mancano e crea
+  una **scaletta nuova** accanto alle sue. I brani che ha già (stesso titolo e artista) non si duplicano; non si
+  toccano trasposizione e velocità di scorrimento, che sono sue.
+- **Solo elenco**: i titoli come testo, per chi non ha Backline.
+
 ## Portare un brano dentro Backline
 
 Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla più comoda:
@@ -45,6 +55,15 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
    - **Via cavo (adb):** il brano arriva subito, con il telefono collegato.
    In entrambi i casi Backline chiede conferma prima di aggiungerlo.
 
+   **Più brani insieme.** «+ Aggiungi alla lista» tiene da parte il brano e svuota il modulo; quando hai finito,
+   «Invia» manda in un colpo solo tutta la lista (più quello che c'è nel modulo). La lista resta anche se
+   ricarichi la pagina. Un brano già in coda non si mette due volte; uno già nel repertorio del telefono la
+   pagina lo segnala, e l'app, se arriva lo stesso, lo salta. In fondo alla pagina si vede cosa il telefono ha
+   già scaricato.
+
+   **Controllo degli accordi.** Se un accordo non c'entra con la tonalità (il tab ha un errore, o la tonalità è
+   sbagliata) la pagina lo elenca sopra l'anteprima. Si perdonano i prestiti comuni (bIII, bVI, bVII…).
+
    **Pulizia e riconoscimento automatici.** Incollando il tab così com'è da Ultimate Guitar, la pagina:
    - toglie la tablatura per chitarra (si può tenere con la casella), la testata «Tuning / Key / Capo»,
      i residui del sito («X», «Last update…») e le sezioni rimaste vuote;
@@ -57,9 +76,10 @@ Sul tablet spesso non si riesce a copiare il testo di un tab. Le strade, dalla p
      ha il BPM lo stima dall'anteprima audio di 30 secondi, con un piccolo componente opzionale
      (`miniaudio`, la pagina lo installa solo se tocchi «Installalo»). La stima è precisa di un paio di BPM,
      ma un brano lento può uscire al doppio: ci sono i tasti **½** e **×2** e **Batti**.
+      Nelle righe a battute (`| D | % | % | G |`) il `%` diventa la battuta precedente, scritta per esteso.
    Fuori dal PC non esce mai il testo del brano: partono solo le frasi cercate, titolo e artista.
    I campi che scrivi a mano non vengono mai sovrascritti. Serve Internet; senza, si compila tutto a mano.
-   Prove: `node tools\pagina-pc\test-pulizia.js` e `python -m unittest test_identifica` (dalla cartella
+   Prove: `node tools\pagina-pc\test-pulizia.js` e `python -m unittest test_identifica` e `python test_server.py` (dalla cartella
    `tools\pagina-pc`); `node prova.js file.txt` mostra cosa viene tolto e i candidati per il titolo.
 1. **Dal PC, in un comando.** Copia il tab sul PC (o salvalo in un `.txt`) e, con il tablet collegato via cavo:
    ```powershell
@@ -79,6 +99,14 @@ Le righe di tablatura per chitarra (`e|---0---|`) restano com'erano, a spaziatur
 
 Un solo file `db.json` nella memoria privata dell'app, scritto su un file temporaneo e poi rinominato.
 Per leggerlo dal PC: `adb shell run-as it.backline.app cat files/db.json`.
+
+**Copie di sicurezza automatiche.** Il database sparisce se disinstalli l'app o il tablet si rompe, quindi a ogni
+apertura Backline:
+- salva una copia al giorno (le ultime 7) in `Android/data/it.backline.app/files/backups`; dal PC, con il cavo,
+  `.	oolsackup.ps1` le scarica in `backup-tablet\`;
+- se «Brani dal PC» è configurato, manda una copia anche al PC (solo se il database è cambiato dall'ultima volta):
+  la pagina le tiene in `tools\pagina-pcackup\` (le ultime 10). Ripristino: Impostazioni → Importa → file
+  → «Sostituisci tutto». Dall'ultima copia la pagina ricava anche i brani che hai già, per avvisarti dei doppioni.
 
 ## Cose da sapere
 
