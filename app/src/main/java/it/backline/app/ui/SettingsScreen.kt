@@ -142,6 +142,7 @@ fun SettingsScreen(
                 }
                 Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
                 Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
+                Toggle("Pulsazione dei BPM", "Un puntino che batte il tempo del brano, in testata: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
                 Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
                 Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
 

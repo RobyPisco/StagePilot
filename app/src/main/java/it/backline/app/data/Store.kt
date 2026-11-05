@@ -93,6 +93,9 @@ class Store(context: Context) {
     /** Aggiunge al gruppo in uso i brani preparati con la pagina del PC. */
     fun addPcSongs(songs: List<PcSong>) = update { normalizeDb(addPcSongs(it, songs, ::newId)) }
 
+    /** Aggiunge la scaletta ricevuta (e i brani che mancano) al gruppo in uso. */
+    fun importSetlist(p: SetlistPackage) = update { normalizeDb(importSetlist(it, p, ::newId)) }
+
     /** Aggiunge i gruppi del backup come gruppi nuovi, senza toccare i tuoi. */
     fun addBands(other: DB) = update { normalizeDb(mergeAsNewBands(it, other, ::newId)) }
 

@@ -61,9 +61,25 @@ fun PcSong.toSong(newId: String): Song = normalizeSong(
     ),
 )
 
-/** Aggiunge i brani al gruppo in uso, e alla scaletta in uso quelli che lo chiedono. */
+/** Chiave per riconoscere lo stesso brano: titolo e artista senza maiuscole, accenti e punteggiatura. */
+fun songKey(title: String, artist: String): String {
+    fun n(s: String) = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD)
+        .filter { it.isLetterOrDigit() }
+    return n(title) + "|" + n(artist)
+}
+
+/** I brani di `songs` che il gruppo in uso ha già (stesso titolo e artista). */
+fun alreadyInBand(db: DB, songs: List<PcSong>): List<PcSong> {
+    val have = db.band.songs.map { songKey(it.title, it.artist) }.toSet()
+    return songs.filter { songKey(it.title, it.artist) in have }
+}
+
+/** Aggiunge i brani al gruppo in uso, e alla scaletta in uso quelli che lo chiedono.
+ *  I brani già presenti (stesso titolo e artista) e i doppioni nel pacchetto si saltano. */
 fun addPcSongs(db: DB, songs: List<PcSong>, newId: (String) -> String): DB {
-    val made = songs.map { it to it.toSong(newId("s")) }
+    val seen = db.band.songs.map { songKey(it.title, it.artist) }.toMutableSet()
+    val fresh = songs.filter { seen.add(songKey(it.title, it.artist)) }
+    val made = fresh.map { it to it.toSong(newId("s")) }
     return db.copy(
         bands = db.bands.map { b ->
             if (b.id != db.curBand) b

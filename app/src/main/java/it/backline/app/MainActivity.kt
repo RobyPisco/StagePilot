@@ -26,11 +26,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.backline.app.core.keyLabel
 import it.backline.app.core.moveItem
 import it.backline.app.core.setAsText
+import it.backline.app.data.AutoBackup
 import it.backline.app.data.DB
+import it.backline.app.data.alreadyInBand
 import it.backline.app.data.PcClient
 import it.backline.app.data.PcException
 import it.backline.app.data.PcSong
 import it.backline.app.data.SetItem
+import it.backline.app.data.SetlistPackage
+import it.backline.app.data.buildSetlistPackage
+import it.backline.app.data.encodeSetlistPackage
+import it.backline.app.data.parseSetlistPackage
+import it.backline.app.data.setlistImportInfo
 import it.backline.app.data.Song
 import it.backline.app.data.Store
 import it.backline.app.data.decodeBackup
@@ -59,12 +66,38 @@ class MainActivity : ComponentActivity() {
     /** Brani preparati con la pagina del PC e mandati con adb. */
     private val incomingSongs = mutableStateOf<List<PcSong>?>(null)
 
+    /** Una scaletta arrivata come file, in attesa di conferma. */
+    private val incomingSetlist = mutableStateOf<SetlistPackage?>(null)
+
+    /** Il testo di un file arrivato da fuori (condiviso o aperto), se si legge e non è enorme. */
+    private fun readStream(intent: Intent): String? {
+        val uri = (if (intent.action == Intent.ACTION_VIEW) intent.data
+        else androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, android.net.Uri::class.java))
+            ?: return null
+        return runCatching {
+            contentResolver.openInputStream(uri)?.use { it.readBytes().takeIf { b -> b.size <= 5_000_000 }?.toString(Charsets.UTF_8) }
+        }.getOrNull()
+    }
+
     private fun readShared(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND) {
-            val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() } ?: return
-            val songs = parsePcPackage(text)
-            if (songs != null) incomingSongs.value = songs else incoming.value = text
+        if (intent == null) return
+        if (intent.action != Intent.ACTION_SEND && intent.action != Intent.ACTION_VIEW) return
+        val text = (readStream(intent) ?: intent.getStringExtra(Intent.EXTRA_TEXT))?.takeIf { it.isNotBlank() }
+        if (text == null) {
+            if (intent.action == Intent.ACTION_VIEW || intent.hasExtra(Intent.EXTRA_STREAM))
+                Toast.makeText(this, "Non riesco a leggere il file", Toast.LENGTH_SHORT).show()
+            return
         }
+        val setlist = parseSetlistPackage(text)
+        if (setlist != null) { incomingSetlist.value = setlist; return }
+        val songs = parsePcPackage(text)
+        if (songs != null) { incomingSongs.value = songs; return }
+        // un file (non testo condiviso) che non è roba di Backline: niente da importare
+        if (intent.action == Intent.ACTION_VIEW || intent.type != "text/plain") {
+            Toast.makeText(this, "Questo file non è una scaletta di Backline", Toast.LENGTH_LONG).show()
+            return
+        }
+        incoming.value = text
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +105,7 @@ class MainActivity : ComponentActivity() {
         val store = Store(applicationContext)
         // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
         if (savedInstanceState == null) readShared(intent)
-        setContent { BacklineTheme { App(store, incoming, incomingSongs) } }
+        setContent { BacklineTheme { App(store, incoming, incomingSongs, incomingSetlist) } }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -88,7 +121,10 @@ private fun toast(context: Context, msg: String) = Toast.makeText(context, msg, 
 private class PcBatch(val songs: List<PcSong>, val ackIds: List<String>)
 
 @Composable
-private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: MutableState<List<PcSong>?>) {
+private fun App(
+    store: Store, incoming: MutableState<String?>, incomingSongs: MutableState<List<PcSong>?>,
+    incomingSetlist: MutableState<SetlistPackage?>,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("pc", Context.MODE_PRIVATE) }
@@ -143,6 +179,19 @@ private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: Mu
     // all'apertura dell'app: se è configurato, si guarda se il PC ha qualcosa in coda (senza disturbare se non c'è)
     LaunchedEffect(Unit) { fetchPc(silent = true) }
 
+    // copia di sicurezza: una al giorno nella memoria del tablet, e una sul PC quando il database è cambiato
+    LaunchedEffect(Unit) {
+        val json = store.exportJson()
+        AutoBackup.saveLocal(context, json)
+        if (pcAddr.isNotBlank() && pcCode.isNotBlank()) {
+            val h = AutoBackup.hash(json)
+            if (prefs.getString("backupHash", "") != h) {
+                runCatching { PcClient.uploadBackup(pcAddr, pcCode, json) }
+                    .onSuccess { prefs.edit().putString("backupHash", h).apply() }
+            }
+        }
+    }
+
     // brani mandati con adb: si chiede conferma come per quelli scaricati
     val sharedSongs = incomingSongs.value
     LaunchedEffect(sharedSongs) {
@@ -184,7 +233,28 @@ private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: Mu
         }
     }
 
-    fun shareSet() {
+    var shareChoice by remember { mutableStateOf(false) }
+
+    /** Manda la scaletta come file Backline: i brani con i chart, in ordine. Si apre con Backline. */
+    fun shareSetFile() {
+        val set = band.curSet ?: return
+        runCatching {
+            val dir = java.io.File(context.cacheDir, "condivisi").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+            val slug = set.name.lowercase().map { if (it.isLetterOrDigit()) it else '-' }.joinToString("").trim('-').ifEmpty { "scaletta" }
+            val f = java.io.File(dir, "scaletta-$slug.json").apply { writeText(encodeSetlistPackage(buildSetlistPackage(band, set))) }
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", f)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "${band.name} — ${set.name}")
+                putExtra(Intent.EXTRA_TEXT, "Scaletta «${set.name}» di ${band.name}: aprila con Backline.")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(send, "Manda la scaletta"))
+        }.onFailure { toast(context, "Non riesco a preparare il file") }
+    }
+
+    fun shareSetText() {
         val text = setAsText(band.entries(), band.name, band.curSet?.name ?: "") { keyLabel(it, db.opt.notation, db.opt.accid) }
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -256,7 +326,7 @@ private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: Mu
             onMove = { from, to -> store.updateItems { items -> moveItem(items, from, to) } },
             onAddSong = { id -> store.updateItems { it + SetItem("song", id = id) } },
             onAddMark = { label, dur -> store.updateItems { it + SetItem("mark", label = label, dur = dur) } },
-            onShare = ::shareSet,
+            onShare = { shareChoice = true },
             onSettings = { route = "settings" },
         ) else RepertoireScreen(
             db = db,
@@ -271,6 +341,7 @@ private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: Mu
 
     pendingPc?.let { batch ->
         val n = batch.songs.size
+        val dups = alreadyInBand(db, batch.songs).size
         PalcoDialog(
             title = if (n == 1) "Un brano dal PC" else "$n brani dal PC",
             confirmText = "Aggiungi",
@@ -291,12 +362,57 @@ private fun App(store: Store, incoming: MutableState<String?>, incomingSongs: Mu
                     )
                 }
                 if (n > 8) Text("e altri ${n - 8}…", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                if (dups > 0) Text(
+                    if (dups == 1) "1 è già nel repertorio: non si aggiunge due volte."
+                    else "$dups sono già nel repertorio: non si aggiungono due volte.",
+                    color = Palco.Amber, fontFamily = Condensed, fontSize = 14.sp,
+                )
                 Text(
                     "Finiscono nel repertorio di «${db.band.name}»" +
                         if (batch.songs.any { it.inSet }) ", e in coda alla scaletta in uso." else ".",
                     color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp,
                 )
             }
+        }
+    }
+
+    if (shareChoice) PalcoDialog(
+        title = "Condividi la scaletta",
+        confirmText = "File Backline",
+        onConfirm = { shareChoice = false; shareSetFile() },
+        onDismiss = { shareChoice = false },
+    ) {
+        androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+            Text(
+                "«File Backline» porta con sé i brani con gli accordi, in ordine: chi lo riceve lo apre con Backline " +
+                    "e si trova la scaletta pronta. «Solo elenco» manda i titoli come testo, per chiunque.",
+                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+            )
+            GhostButton("Solo elenco (testo)") { shareChoice = false; shareSetText() }
+        }
+    }
+
+    incomingSetlist.value?.let { p ->
+        val info = setlistImportInfo(db, p)
+        PalcoDialog(
+            title = "Scaletta «${p.name.ifBlank { "senza nome" }}»",
+            confirmText = "Aggiungi",
+            onConfirm = {
+                store.importSetlist(p)
+                incomingSetlist.value = null
+                tab = 0; route = "main"
+                toast(context, "Scaletta aggiunta")
+            },
+            onDismiss = { incomingSetlist.value = null },
+        ) {
+            Text(
+                (if (p.band.isNotBlank()) "Da «${p.band}». " else "") +
+                    "${p.items.count { it.type == "song" }} brani in scaletta" +
+                    (if (info.newSongs > 0) "; ${info.newSongs} ${if (info.newSongs == 1) "nuovo" else "nuovi"} per te" else "") +
+                    (if (info.knownSongs > 0) "; ${info.knownSongs} li hai già, non si duplicano" else "") +
+                    ".\n\nFinisce nel gruppo «${db.band.name}», come scaletta nuova: le tue non si toccano.",
+                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+            )
         }
     }
 

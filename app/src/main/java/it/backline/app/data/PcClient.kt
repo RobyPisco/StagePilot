@@ -68,4 +68,17 @@ object PcClient {
             }
         }
     }
+
+    /** Manda al PC una copia di sicurezza del database (la pagina ne tiene le ultime). */
+    suspend fun uploadBackup(address: String, code: String, json: String) = withContext(Dispatchers.IO) {
+        guard {
+            val c = open(address, code, "/api/backup", post = true)
+            try {
+                c.outputStream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                if (c.responseCode != 200) throw PcException("Il PC non ha accettato il backup (${c.responseCode}).")
+            } finally {
+                c.disconnect()
+            }
+        }
+    }
 }

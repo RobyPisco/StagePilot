@@ -203,6 +203,9 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                     }
                 }
             }
+            if (entry is Entry.Track && opt.pulse) entry.song.bpm?.takeIf { it in 20..300 }?.let { bpm ->
+                BeatDot(bpm, Modifier.padding(end = 14.dp))
+            }
             if (entry is Entry.Track) {
                 val k = keyLabel(entry.song, opt.notation, opt.accid)
                 if (k.isNotEmpty()) Text(
@@ -426,6 +429,35 @@ private fun RowScope.Control(
         Text(
             label.uppercase(), color = if (primary) fg else Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
             fontSize = 11.sp, letterSpacing = 1.1.sp,
+        )
+    }
+}
+
+/** Un puntino che si accende a tempo coi BPM; il primo battito ogni quattro è più grande (4/4). Le attese
+ *  sono calcolate dall'inizio, non una dopo l'altra, così il tempo non scivola. */
+@Composable
+private fun BeatDot(bpm: Int, modifier: Modifier = Modifier) {
+    var on by remember { mutableStateOf(false) }
+    var accent by remember { mutableStateOf(false) }
+    LaunchedEffect(bpm) {
+        val period = 60_000_000_000L / bpm
+        val start = System.nanoTime()
+        var n = 0L
+        while (true) {
+            accent = n % 4 == 0L
+            on = true
+            delay(90)
+            on = false
+            n++
+            val wait = (start + n * period - System.nanoTime()) / 1_000_000
+            if (wait > 0) delay(wait)
+        }
+    }
+    val size = if (accent) 22.dp else 16.dp
+    Box(modifier.size(24.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
+                .background(if (on) Palco.Amber else Palco.Line),
         )
     }
 }
