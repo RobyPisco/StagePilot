@@ -177,7 +177,15 @@ fun SettingsScreen(
                 }
 
                 Spacer(Modifier.height(8.dp))
-                Text("Backline 0.1.0", color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp)
+                // la versione vera dell'app, letta dal pacchetto: così non resta mai indietro rispetto alla build
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val version = remember {
+                    runCatching {
+                        val i = context.packageManager.getPackageInfo(context.packageName, 0)
+                        "Backline ${i.versionName} (build ${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(i)})"
+                    }.getOrDefault("Backline")
+                }
+                Text(version, color = Palco.Dim, fontFamily = Mono, fontSize = 12.sp)
                 Spacer(Modifier.height(24.dp))
             }
         }

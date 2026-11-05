@@ -29,6 +29,8 @@ cosa è stato deciso e cosa resta da fare.
   brani e l'ordine; chi lo apre con Backline li aggiunge e ottiene la scaletta. Provato sul tablet, andata e ritorno
   (condivisione → chooser → Backline → conferma), con un brano già noto e uno nuovo. **Non provato** con un
   secondo telefono e con WhatsApp/Telegram veri.
+- **Versione 0.2.0** (build 2), visibile in fondo a Impostazioni. APK di rilascio in `dist\Backline-0.2.0.apk`,
+  firmato con la chiave di debug (scelta: per ora basta; chi cambia PC dovrà reinstallare).
 - `server.py`: non va più in errore se l'output non è una console UTF-8.
 
 ## Da fare / da provare
@@ -37,9 +39,11 @@ cosa è stato deciso e cosa resta da fare.
    server, non con il telefono vero. Con il cavo è già provato (5 novembre): la finestra dice «1 è già nel
    repertorio». Una volta, con l'app aperta e il tablet appena svegliato, la finestra è uscita a 0×0; non si è più
    ripetuta in 3 prove.
-2. Il tablet aveva l'app firmata con un'altra chiave di debug: è stata disinstallata e reinstallata, i dati
+2. **Attenzione**: dopo il 5 novembre il repertorio del tablet è cambiato (altri brani aggiunti). La copia
+   `backup-tablet\prima-dell-aggiornamento.json` è vecchia: non rimetterla sul tablet.
+3. Il tablet aveva l'app firmata con un'altra chiave di debug: è stata disinstallata e reinstallata, i dati
    ripristinati dalla copia (`backup-tablet\prima-dell-aggiornamento.json`, 6 brani del gruppo COPYCUT).
    D'ora in poi gli aggiornamenti con `adb install -r` funzionano da questo PC.
-3. Idee non fatte: cerca da titolo+artista senza tab incollato, click sonoro dai BPM, riepilogo della serata
+4. Idee non fatte: cerca da titolo+artista senza tab incollato, click sonoro dai BPM, riepilogo della serata
    (tempo reale contro previsto), Il timer per brano
    in live c'è già.

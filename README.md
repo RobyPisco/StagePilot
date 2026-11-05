@@ -18,6 +18,23 @@ L'app web da cui nasce, con la specifica delle funzioni, sta in `D:\progetti\bac
 - **Gruppi e impostazioni**: ruolo, alterazioni, corpo del testo, solo fondamentali, solo testo.
 - **Backup** JSON, lo stesso formato dell'app web: esporta, importa, sostituisci o aggiungi come gruppi nuovi.
 
+## Versione e APK da dare agli altri
+
+La versione (ora **0.2.0**, build 2) si cambia in `app/build.gradle.kts` (`versionName`, `versionCode`) e si legge
+in fondo a Impostazioni. Per salire di versione si alza sempre anche `versionCode`: serve ad Android per
+aggiornare un'app già installata senza perdere i dati.
+
+APK di rilascio (piccolo, ridotto con R8, firmato con la chiave di debug di questo PC):
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+.\gradlew.bat assembleRelease        # appuild\outputspkeleasepp-release.apk
+```
+
+Una copia da distribuire sta in `dist\Backline-0.2.0.apk` (non è nel repo). Per installarla: consentire
+«installa da fonti sconosciute» e aprire il file. Chi ha già una versione firmata con un'altra chiave deve prima
+disinstallarla (e perde i dati: meglio un backup prima).
+
 ## Compilare e provare
 
 Serve il JDK 21 di Android Studio (il Java di sistema, se più recente, non va bene per Gradle):
