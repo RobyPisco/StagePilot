@@ -93,6 +93,11 @@ fun BrandBar(bandName: String, onClick: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Icon(Ic.Chevron, null, tint = Palco.Dim, modifier = Modifier.size(12.dp))
         }
+        Box(
+            Modifier.padding(start = 8.dp).size(40.dp).clip(CircleShape).border(1.dp, Palco.Outline, CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Ic.Sliders, "Impostazioni", tint = Palco.Ink, modifier = Modifier.size(20.dp)) }
     }
 }
 

@@ -35,5 +35,7 @@ object Ic {
     val Pause = icon("pause", "M7 5h3v14H7z M14 5h3v14h-3z", filled = true)
     val Up = icon("up", "M5 15l7-7 7 7")
     val Close = icon("close", "M6 6l12 12M18 6L6 18")
+    val Sliders = icon("sliders", "M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6")
+    val Grip = icon("grip", "M5 9h14M5 15h14")
     val Plus = icon("plus", "M12 5v14M5 12h14")
 }

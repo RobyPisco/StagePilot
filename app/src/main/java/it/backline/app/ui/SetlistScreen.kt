@@ -20,6 +20,21 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -88,9 +103,19 @@ fun SetlistScreen(
     BoxWithConstraints(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding()) {
         val wide = maxWidth > maxHeight && maxWidth >= 600.dp
 
+        val listState = rememberLazyListState()
+        val drag = remember { DragState() }
+        val handlePx = with(LocalDensity.current) { 64.dp.toPx() }
+        // vicino al bordo la lista scorre da sola, e la riga resta sotto il dito
+        LaunchedEffect(drag.idx >= 0) {
+            while (drag.idx >= 0) {
+                if (drag.scroll != 0f) drag.offset += listState.scrollBy(drag.scroll)
+                delay(16)
+            }
+        }
         val list: @Composable (Modifier) -> Unit = { m ->
-            LazyColumn(m) {
-                itemsIndexed(entries) { i, e -> EntryRow(i, e, ord[i], editing, db, entries.lastIndex, onOpen, onMove, onRemove) }
+            LazyColumn(m.dragReorder(listState, drag, editing, handlePx, onMove), state = listState) {
+                itemsIndexed(entries) { i, e -> EntryRow(i, e, ord[i], editing, db, drag, onOpen, onRemove) }
             }
         }
         val start: @Composable () -> Unit = {
@@ -184,6 +209,68 @@ fun SetlistScreen(
     }
 }
 
+/** Stato del trascinamento di una riga: quale e di quanto è spostata rispetto al suo posto. */
+private class DragState {
+    var idx by mutableIntStateOf(-1)
+    var offset by mutableFloatStateOf(0f)
+    var scroll by mutableFloatStateOf(0f)
+}
+
+/** Si trascina la riga dalla maniglia a destra (solo in Modifica): il dito la porta su e giù, e quando
+ *  il centro supera un'altra riga le due si scambiano. Fuori dalla maniglia la lista scorre normale. */
+private fun Modifier.dragReorder(
+    state: LazyListState, drag: DragState, enabled: Boolean, handlePx: Float, onMove: (Int, Int) -> Unit,
+): Modifier = if (!enabled) this else pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (down.position.x < size.width - handlePx) return@awaitEachGesture
+        val first = state.layoutInfo.visibleItemsInfo
+            .firstOrNull { down.position.y >= it.offset && down.position.y < it.offset + it.size }
+            ?: return@awaitEachGesture
+        down.consume()
+        drag.idx = first.index
+        drag.offset = 0f
+        var last = down.position.y
+        var stamp: Any? = null
+        try {
+            while (true) {
+                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                ch.consume()
+                if (!ch.pressed) break
+                drag.offset += ch.position.y - last
+                last = ch.position.y
+                drag.scroll = when {
+                    ch.position.y < 90f -> -18f
+                    ch.position.y > size.height - 90f -> 18f
+                    else -> 0f
+                }
+                // dopo uno scambio si aspetta che la lista si ridisegni prima di valutarne un altro
+                val info = state.layoutInfo
+                if (info !== stamp) {
+                    val cur = info.visibleItemsInfo.firstOrNull { it.index == drag.idx }
+                    if (cur != null) {
+                        val centre = cur.offset + cur.size / 2f + drag.offset
+                        val tgt = info.visibleItemsInfo
+                            .firstOrNull { it.index != cur.index && centre >= it.offset && centre < it.offset + it.size }
+                        if (tgt != null) {
+                            val newOff = if (tgt.index > cur.index) tgt.offset + tgt.size - cur.size else tgt.offset
+                            drag.offset += cur.offset - newOff
+                            onMove(cur.index, tgt.index)
+                            drag.idx = tgt.index
+                            stamp = info
+                        }
+                    }
+                }
+            }
+        } finally {
+            drag.idx = -1
+            drag.offset = 0f
+            drag.scroll = 0f
+        }
+    }
+}
+
 @Composable
 private fun SetTitle(db: DB, entries: List<Entry>) {
     val songs = entries.count { it is Entry.Track }
@@ -232,12 +319,15 @@ private fun EditActions(onAddSong: () -> Unit, onAddMark: () -> Unit) {
 
 @Composable
 private fun EntryRow(
-    i: Int, e: Entry, number: Int, editing: Boolean, db: DB, last: Int,
-    onOpen: (Int) -> Unit, onMove: (Int, Int) -> Unit, onRemove: (Int) -> Unit,
+    i: Int, e: Entry, number: Int, editing: Boolean, db: DB, drag: DragState,
+    onOpen: (Int) -> Unit, onRemove: (Int) -> Unit,
 ) {
+    val lift = Modifier.zIndex(if (drag.idx == i) 1f else 0f)
+        .graphicsLayer { translationY = if (drag.idx == i) drag.offset else 0f }
+        .background(if (drag.idx == i) Palco.Panel else Palco.Pitch)
     when (e) {
         is Entry.Track -> Row(
-            Modifier.fillMaxWidth().heightIn(min = 58.dp)
+            lift.fillMaxWidth().heightIn(min = 58.dp)
                 .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
                 .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -258,7 +348,7 @@ private fun EntryRow(
                 ).joinToString(" · ")
                 if (sub.isNotEmpty()) Text(sub, color = Palco.Dim, fontFamily = Condensed, fontSize = 13.sp)
             }
-            if (editing) EditButtons(i, last, onMove, onRemove) else {
+            if (editing) EditButtons(i, onRemove) else {
                 val k = keyLabel(e.song, db.opt.notation, db.opt.accid)
                 if (k.isNotEmpty()) Text(
                     k, color = Palco.Ink, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
@@ -272,7 +362,7 @@ private fun EntryRow(
             }
         }
         is Entry.Mark -> Row(
-            Modifier.fillMaxWidth().heightIn(min = 50.dp).background(Palco.Panel)
+            lift.fillMaxWidth().heightIn(min = 50.dp).background(Palco.Panel)
                 .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
                 .padding(start = 20.dp, end = if (editing) 8.dp else 20.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -283,7 +373,7 @@ private fun EntryRow(
                 e.label, color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.Medium,
                 fontStyle = FontStyle.Italic, fontSize = 19.sp, modifier = Modifier.weight(1f),
             )
-            if (editing) EditButtons(i, last, onMove, onRemove) else Text(
+            if (editing) EditButtons(i, onRemove) else Text(
                 if (secs(e.dur) > 0) mmss(secs(e.dur)) else "", color = Palco.Dim, fontFamily = Mono,
                 fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(44.dp),
             )
@@ -293,11 +383,13 @@ private fun EntryRow(
 }
 
 @Composable
-private fun EditButtons(i: Int, last: Int, onMove: (Int, Int) -> Unit, onRemove: (Int) -> Unit) {
-    Row {
-        SmallIcon(Ic.Up, "Sposta su", enabled = i > 0) { onMove(i, i - 1) }
-        SmallIcon(Ic.Chevron, "Sposta giù", enabled = i < last) { onMove(i, i + 1) }
+private fun EditButtons(i: Int, onRemove: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         SmallIcon(Ic.Close, "Togli dalla scaletta", tint = Palco.Warn) { onRemove(i) }
+        // la maniglia non fa niente da sola: il trascinamento lo gestisce la lista (dragReorder)
+        Box(Modifier.size(width = 56.dp, height = 44.dp), contentAlignment = Alignment.Center) {
+            Icon(Ic.Grip, "Trascina per spostare", tint = Palco.Dim, modifier = Modifier.size(24.dp))
+        }
     }
 }
 

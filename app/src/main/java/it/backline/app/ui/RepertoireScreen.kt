@@ -22,7 +22,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +49,7 @@ import it.backline.app.data.DB
 
 /* Il repertorio: tutti i brani del gruppo, con ricerca. Toccare un brano apre
    l'editor; il puntino ambra dice che è nella scaletta corrente. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RepertoireScreen(
     db: DB,
@@ -53,7 +59,9 @@ fun RepertoireScreen(
     onImport: () -> Unit,
     onSettings: () -> Unit,
     onSort: (String) -> Unit,
+    onDeleteSong: (String) -> Unit,
 ) {
+    var toDelete by remember { mutableStateOf<String?>(null) }
     val band = db.band
     var query by rememberSaveable { mutableStateOf("") }
     val inSet = band.curSet?.items.orEmpty().filter { it.type == "song" }.mapNotNull { it.id }.toSet()
@@ -90,8 +98,28 @@ fun RepertoireScreen(
 
             LazyColumn(Modifier.weight(1f)) {
                 items(shown, key = { it.id }) { s ->
+                    val dismiss = rememberSwipeToDismissBoxState(confirmValueChange = {
+                        // la riga torna al suo posto: si elimina solo dopo la conferma
+                        if (it != SwipeToDismissBoxValue.Settled) toDelete = s.id
+                        false
+                    })
+                    SwipeToDismissBox(
+                        state = dismiss,
+                        backgroundContent = {
+                            val toRight = dismiss.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+                            Box(
+                                Modifier.fillMaxSize().background(Palco.Warn).padding(horizontal = 24.dp),
+                                contentAlignment = if (toRight) Alignment.CenterStart else Alignment.CenterEnd,
+                            ) {
+                                Text(
+                                    "ELIMINA", color = Palco.OnAmber, fontFamily = Condensed, fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp, letterSpacing = 1.6.sp,
+                                )
+                            }
+                        },
+                    ) {
                     Row(
-                        Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable { onOpenSong(s.id) }
+                        Modifier.fillMaxWidth().background(Palco.Pitch).heightIn(min = 60.dp).clickable { onOpenSong(s.id) }
                             .padding(horizontal = 20.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -125,10 +153,15 @@ fun RepertoireScreen(
                             fontSize = 13.sp, textAlign = TextAlign.End, modifier = Modifier.width(36.dp),
                         )
                     }
+                    }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
                 }
             }
 
+            Text(
+                "Scorri una riga di lato per eliminare il brano", color = Palco.Dim, fontFamily = Condensed, fontSize = 12.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -137,6 +170,17 @@ fun RepertoireScreen(
                 GhostButton("Importa", Modifier.padding(vertical = 2.dp), onClick = onImport)
                 AmberButton("+ Nuovo brano", Modifier.weight(1f), onClick = onNewSong)
             }
+        }
+    }
+    toDelete?.let { id ->
+        val song = band.songs.firstOrNull { it.id == id }
+        if (song == null) toDelete = null else PalcoDialog(
+            "Eliminare il brano?", "Elimina", { onDeleteSong(id); toDelete = null }, { toDelete = null },
+        ) {
+            Text(
+                "«${song.title}» sparisce dal repertorio e da tutte le scalette.",
+                color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+            )
         }
     }
 }

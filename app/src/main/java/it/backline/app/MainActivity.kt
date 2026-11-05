@@ -102,6 +102,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // sul leggio lo schermo non si spegne finché l'app è davanti
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val store = Store(applicationContext)
         // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
         if (savedInstanceState == null) readShared(intent)
@@ -336,6 +338,7 @@ private fun App(
             onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
             onSettings = { route = "settings" },
             onSort = { s -> store.updateOptions { it.copy(sort = s) } },
+            onDeleteSong = { id -> store.deleteSong(id) },
         )
     }
 
