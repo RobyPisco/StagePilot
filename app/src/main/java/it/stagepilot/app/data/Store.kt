@@ -44,7 +44,9 @@ class Store(context: Context) {
 
     fun clearError() { _error.value = null }
     fun syncBase(): String? = sqlite.syncBase()
-    @Synchronized fun acceptSync(next: DB) {
+    fun clearSyncBase() { sqlite.save(_db.value, null, null) }
+    @Synchronized fun acceptSync(next: DB, expected: DB? = null) {
+        check(expected == null || _db.value == expected) { "La libreria sul tablet è cambiata durante il collegamento. Sincronizza di nuovo: le tue ultime modifiche sono al sicuro." }
         val clean = normalizeDb(next)
         sqlite.save(clean, _db.value, encodeBackup(clean))
         _db.value = clean
@@ -57,6 +59,8 @@ class Store(context: Context) {
     fun saveEvent(event: Gig) = updateBand { b -> b.copy(events = b.events.filterNot { it.id == event.id } + event) }
     fun deleteEvent(id: String) = updateBand { b -> b.copy(events = b.events.filterNot { it.id == id }) }
     fun logRehearsal(session: Rehearsal) = updateBand { b -> b.copy(rehearsals = (b.rehearsals + session).takeLast(100)) }
+    fun saveTask(task: PracticeTask) = updateBand { b -> b.copy(practiceTasks = b.practiceTasks.filterNot { it.id == task.id } + task) }
+    fun deleteTask(id: String) = updateBand { b -> b.copy(practiceTasks = b.practiceTasks.filterNot { it.id == id }) }
 
     fun updateSong(id: String, change: (Song) -> Song) = update { db ->
         db.copy(bands = db.bands.map { b ->
@@ -101,14 +105,13 @@ class Store(context: Context) {
     fun deleteSong(id: String) = updateBand { b ->
         b.copy(
             songs = b.songs.filterNot { it.id == id },
+            practiceTasks = b.practiceTasks.filterNot { it.songId == id },
             sets = b.sets.map { s -> s.copy(items = s.items.filterNot { it.type == "song" && it.id == id }) },
         )
     }
 
     fun newId(prefix: String): String =
-        prefix + System.currentTimeMillis().toString(36) + (counter++).toString(36)
-
-    private var counter = 0
+        prefix + java.util.UUID.randomUUID().toString()
 
     /* ── backup ───────────────────────────────────────────── */
 

@@ -18,6 +18,7 @@ class Clicker {
     private val normal = burst(1100, 35)
 
     @Volatile private var running = false
+    private val generation = java.util.concurrent.atomic.AtomicLong(0)
     private var thread: Thread? = null
 
     /** Quanto passa, grosso modo, fra la scrittura di un colpo e il suono: serve ad allineare il lampeggio. */
@@ -27,6 +28,7 @@ class Clicker {
     /** Parte da un primo battito accentato. Se già suonava, riparte da capo (ad esempio al cambio dei BPM). */
     fun start(bpm: Int) {
         stop()
+        val workerGeneration = generation.get()
         // se il dispositivo non riesce ad aprire l'uscita audio, il click resta muto: l'app non deve mai chiudersi per questo
         val min = runCatching { AudioTrack.getMinBufferSize(RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT) }.getOrDefault(0)
         // prima si chiede la latenza più bassa e il buffer più piccolo; se il dispositivo rifiuta, si ripiega
@@ -66,7 +68,7 @@ class Clicker {
                 var beat = 0
                 var cur: ShortArray? = null
                 var idx = 0
-                while (running) {
+                while (running && generation.get() == workerGeneration) {
                     for (i in 0 until CHUNK) {
                         if (pos + i >= nextClick) {
                             cur = if (beat % 4 == 0) accent else normal
@@ -90,6 +92,7 @@ class Clicker {
 
     fun stop() {
         running = false
+        generation.incrementAndGet()
         thread = null
     }
 

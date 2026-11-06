@@ -1,47 +1,87 @@
 # StagePilot
 
-Repertorio, prove e concerti. **Android nativo sul palco, studio web per preparare tutto dal PC.**
+**Prepara sul PC, prova con un obiettivo, suona dal tablet.** Android nativo e studio web locale, con librerie SQLite autonome e sincronizzazione esplicita. Tema grafite e azzurro, app separata da Backline (`it.stagepilot.app`).
 
-Progetto derivato da Backline, con identità e application ID separati: `it.stagepilot.app`.
+## Funzioni del primo MVP
 
-## Prima revisione: le interfacce
+- **Importazione:** incolla testo e accordi da Ultimate Guitar, oppure apri un file ChordPro/testo. Pulizia di intestazioni e residui del sito, tablatura opzionale, lettura di titolo/artista/tonalità/capotasto quando presenti, anteprima prima di salvare. Le parole non vengono riscritte e i BPM mancanti non vengono inventati.
+- **Repertorio:** creazione, modifica, ricerca, tag, BPM, tonalità, durata, note condivise e per ruolo, stato di preparazione e appunto di prova.
+- **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come file o elenco su Android.
+- **Prova guidata:** agenda di passaggi specifici, scelta della sezione del brano, obiettivo, ruolo responsabile, decisioni condivise, stato da risolvere/risolto e filtro personale. Apertura del solo passaggio nel lettore, senza modificare il chart originale. Sessioni cronometrate con riepilogo nel registro.
+- **Concerti:** data, orario, luogo, scaletta e appunti. Controlli sui brani ancora da preparare, sui passaggi aperti e sulle durate mancanti. Accesso alla prova filtrata per la scaletta della serata.
+- **Palco Android:** schermo acceso, trasposizione, notazione inglese/italiana, scorrimento, solo testo/struttura, note per ruolo, capotasto, blocco del chart, prossimo brano e metronomo. Regia del set con salto diretto ai brani, tempo rimanente stimato e richiesta fuori scaletta dal repertorio. Supporto ai tasti di girapagine Bluetooth.
+- **Dati:** SQLite sul PC e sul tablet, backup JSON compatibili con Backline, copie locali Android, cronologia del PC con annullamento. La sincronizzazione unisce campi indipendenti, chiede una scelta per i conflitti e rifiuta conferme riferite a revisioni superate. Le preferenze personali di lettura non vengono imposte agli altri dispositivi.
 
-La prima consegna è una **proposta grafica interattiva**, da valutare prima di portare il nuovo design nelle schermate native.
+## Avvio rapido su Windows
 
-Su Windows avviare `StagePilot-preview.cmd` (serve Python 3) oppure aprire direttamente `preview/index.html` nel browser.
+Per compilare dal repository servono **Node.js 24, Python 3, JDK 21 e Android SDK 36**. Sul PC usato per lo sviluppo il JDK 21 è quello incluso in Android Studio.
 
-Nell'anteprima si può passare tra **Android** e **Studio web** e provare Oggi, Repertorio, Importazione, Scalette, Prove e Palco. Si possono cercare e filtrare i brani, modificare i promemoria, provare la pulizia di un testo con accordi, riordinare la scaletta, avviare il cronometro delle prove e vedere la trasposizione.
+1. Esegui `Build-StagePilot.cmd`, oppure usa i comandi sotto.
+2. Esegui `StagePilot.cmd` per aprire lo studio web.
+3. Apri **Collega Android** nel browser: mostra l'indirizzo e un codice di sei cifre.
+4. Sul tablet apri StagePilot, tocca il nome della band/ingranaggio → **Studio web**, inserisci indirizzo e codice e premi **Sincronizza**.
 
-**Sono dati dimostrativi.** Le modifiche dell'anteprima si azzerano ricaricando; il collegamento Android–PC e lo scorrimento sono rappresentazioni dell'interfaccia, non funzioni già collegate alla nuova app.
-
-Dettagli della proposta e limiti: [DESIGN.md](DESIGN.md).
-
-## Base Android
-
-`app/` contiene la base Kotlin / Jetpack Compose derivata da Backline. Il nuovo modello dati aggiunge preparazione dei brani, eventi e prove; è presente una prima persistenza SQLite transazionale. La grafica dell'APK preliminare è ancora quella della base, non quella della proposta.
-
-Compilazione Windows con JDK 21 e Android SDK 36:
+PC e tablet devono stare sulla stessa Wi-Fi. Il codice è creato sul PC al primo avvio e non è incluso nel repository. Lo studio web è locale: non servono account o abbonamenti. Sul palco Android legge la propria libreria senza dipendere dal PC.
 
 ```powershell
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr' # verificare che sia JDK 21
+cd D:\progetti\StagePilot\web
+npm ci
+npm test
+npm run build
+cd ..
+python studio\server.py
+```
+
+L'APK di prova è in `app/build/outputs/apk/debug/app-debug.apk`. Si installa accanto a Backline:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 New-Item -ItemType Directory -Force .tmp | Out-Null
 $env:JAVA_TOOL_OPTIONS = "-Djdk.net.unixdomain.tmpdir=$((Resolve-Path .tmp).Path)"
-.\gradlew.bat testDebugUnitTest assembleDebug
+.\gradlew.bat testDebugUnitTest assembleDebug assembleDebugAndroidTest
+adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-La directory corta per i socket risolve l'errore `Unable to establish loopback connection` riscontrato sul PC di sviluppo. L'APK preliminare viene generato in `app/build/outputs/apk/debug/app-debug.apk`.
+Per le sole prove via cavo si può usare `adb reverse tcp:8765 tcp:8765` e inserire `127.0.0.1:8765` nell'app. Il collegamento Wi-Fi è stato verificato direttamente sul Fire HD 8 e configurato con l'indirizzo del PC.
 
-## Sviluppo successivo
+## Dati e recupero
 
-1. Valutare il design Android e web.
-2. Portare le schermate approvate in Compose e completare lo studio web.
-3. Completare l'importazione dei backup Backline e la gestione di brani/scalette.
-4. Completare scambio dati, gestione dei conflitti, backup e recupero.
-5. Provare l'intero flusso su telefono e tablet reali, offline e con rete interrotta.
-
-`studio/library.py` e `web/` sono fondamenta preliminari, non ancora un servizio web avviabile. `tools/pagina-pc/` conserva il precedente strumento PC di Backline come riferimento.
+- PC: `studio/data/stagepilot.sqlite`, escluso da Git; conserva fino a 40 revisioni precedenti.
+- Android: `stagepilot.sqlite` nella memoria privata dell'app, con una cronologia locale; **Impostazioni → Backup** esporta/importa il formato JSON.
+- La scrittura della libreria e della base di sincronizzazione avviene nella stessa transazione SQLite.
+- Per migrare il repertorio di Backline, esporta il suo backup e importalo in StagePilot. Il progetto non modifica i dati dell'altra app.
+- Un backup esportato è il modo più semplice per trasferire o conservare l'intera libreria. Disinstallare un'app Android rimuove la sua memoria privata.
 
 ## Verifiche
 
-La base Android rinominata compila e supera i **56 test JVM esistenti**. L'anteprima è stata verificata nel browser per navigazione, importazione dimostrativa, riordino e trasposizione; sono stati controllati i layout mobile e desktop. Le nuove funzioni di database/sincronizzazione richiedono ancora test dedicati e sul dispositivo.
+- JVM Android: test del motore musicale, importazione, normalizzazione, pacchetti, scalette e preparazione della serata.
+- Web: test del convertitore distribuito, cancellazione con rimozione dei riferimenti, tempi/trasposizione e confronto delle bozze.
+- Server: test SQLite, riapertura, annullamento, revisioni, autenticazione LAN, conflitti, passaggi di prova e richieste HTTP.
+- **Fire HD 8 / Android 10:** due test strumentati su conversione ICU e transazioni SQLite, incluso errore a metà scrittura. Provati anche importazione dal browser, persistenza dopo ricaricamento, trasferimento USB e Wi-Fi, conflitto con revisione superata e apertura del singolo ritornello sul tablet.
+
+```powershell
+cd studio
+python -m unittest discover -v
+```
+
+Per i test sul dispositivo installare anche `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`, poi:
+
+```powershell
+adb shell am instrument -r -w it.stagepilot.app.test/it.stagepilot.app.SmokeInstrumentation
+```
+
+## Piano da venerdì a domenica
+
+- **Venerdì sera:** modello dati, progetto Android separato, interfaccia condivisa e SQLite.
+- **Sabato mattina:** importazione, repertorio e scalette; sabato pomeriggio lettore da palco e studio web.
+- **Sabato sera:** sincronizzazione, backup e test sul dispositivo.
+- **Domenica mattina:** prova guidata, preparazione concerti e regia live; domenica pomeriggio prova completa della band, correzioni di leggibilità e confezionamento.
+
+## Confini di questo MVP
+
+La sincronizzazione è avviata dal pulsante sul tablet, non è collaborazione in tempo reale. Le stime live dipendono dalle durate inserite. Non sono ancora inclusi PDF, registrazioni audio, multitraccia, MIDI, controllo simultaneo di più tablet, account/cloud e ricerca/importazione diretta da URL Ultimate Guitar. Il click audio e i pedali reali richiedono una prova musicale dedicata; i relativi controlli già esistono.
+
+`preview/` conserva la proposta grafica approvata. L'app funzionante è in `app/` e `web/`; `tools/pagina-pc/` resta come riferimento dello strumento precedente. La conversione browser condivisa deriva da Backline ed è distribuita con il suo codice nel progetto.
+
+Ispirazioni di prodotto: [MobileSheets](https://www.zubersoft.com/mobilesheets/), [BandHelper Practice](https://www.bandhelper.com/tutorials/practicing.html), [SongbookPro Manager](https://songbook-pro.com/docs/manager/) e [ChordPro](https://www.chordpro.org/chordpro/chordpro-directives/).

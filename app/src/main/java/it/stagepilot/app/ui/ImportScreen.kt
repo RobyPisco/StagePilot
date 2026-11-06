@@ -42,6 +42,7 @@ import it.stagepilot.app.core.SheetLine
 import it.stagepilot.app.core.chordProMeta
 import it.stagepilot.app.core.renderSheet
 import it.stagepilot.app.core.tabToChordPro
+import it.stagepilot.app.core.prepareSong
 import it.stagepilot.app.data.Song
 
 /* Importazione: si incolla un tab "accordi sopra il testo" (Ultimate Guitar e
@@ -59,12 +60,14 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
             context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
         }.getOrNull()?.let { raw = it }
     }
-    val converted = remember(raw) { tabToChordPro(raw) }
+    var keepTab by rememberSaveable { mutableStateOf(false) }
+    val prepared = remember(raw, keepTab) { prepareSong(raw, keepTab) }
+    val converted = prepared.body
     val preview = remember(converted) { renderSheet(converted) }
     val chords = remember(converted) { Regex("""\[[^\]]+]""").findAll(converted).count() }
     val sections = preview.count { it is SheetLine.Section }
     val lines = preview.count { it is SheetLine.Lyric }
-    val ready = raw.isNotBlank() && chords > 0
+    val ready = converted.isNotBlank()
 
     BackHandler(onBack = onClose)
 
@@ -87,8 +90,8 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
                     modifier = Modifier
                         .background(if (ready) Palco.Amber else Palco.Outline, RoundedCornerShape(10.dp))
                         .clickable(enabled = ready) {
-                            val meta = chordProMeta(raw)
-                            onContinue(Song(id = newId, title = meta.title, artist = meta.artist, key = meta.key, capo = meta.capo, body = converted))
+                            val meta = prepared.meta
+                            onContinue(Song(id = newId, title = meta.title, artist = meta.artist, key = meta.key, capo = meta.capo, bpm = prepared.bpm, dur = prepared.duration, body = converted))
                         }
                         .padding(horizontal = 18.dp, vertical = 10.dp),
                 )
@@ -110,6 +113,7 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
                     if (raw.isNotEmpty()) GhostButton("Svuota") { raw = "" }
                 }
                 PalcoField(raw, { raw = it }, "Testo da importare", singleLine = false, minLines = 6, mono = true)
+                androidx.compose.material3.FilterChip(selected = keepTab, onClick = { keepTab = !keepTab }, label = { Text("Mantieni tablatura per chitarra") })
 
                 if (raw.isNotBlank()) {
                     Text(
@@ -117,11 +121,11 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
                         fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                     Text(
-                        if (chords == 0) "Non ho trovato accordi: controlla che siano su righe a parte, sopra il testo."
-                        else "$chords accordi · $lines righe · $sections sezioni",
-                        color = if (chords == 0) Palco.Warn else Palco.Amber, fontFamily = Mono, fontSize = 13.sp,
+                        if (chords == 0) "Solo testo · ${prepared.removed} righe di servizio rimosse"
+                        else "$chords accordi · $sections sezioni · ${prepared.removed} righe ripulite",
+                        color = Palco.Amber, fontFamily = Mono, fontSize = 13.sp,
                     )
-                    if (chords > 0) Column(
+                    if (ready) Column(
                         Modifier.fillMaxWidth().background(Palco.Panel, RoundedCornerShape(10.dp)).padding(14.dp),
                     ) {
                         preview.take(40).forEach { l ->

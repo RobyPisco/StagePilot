@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -64,6 +65,9 @@ import it.stagepilot.app.ui.PalcoDialog
 import it.stagepilot.app.ui.RepertoireScreen
 import it.stagepilot.app.ui.SetlistScreen
 import it.stagepilot.app.ui.SettingsScreen
+import it.stagepilot.app.ui.HomeScreen
+import it.stagepilot.app.ui.GuidedPracticeScreen
+import it.stagepilot.app.ui.ConcertsScreen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -148,14 +152,20 @@ private fun App(
     val prefs = remember { context.getSharedPreferences("pc", Context.MODE_PRIVATE) }
     val db by store.db.collectAsStateWithLifecycle()
     val band = db.band
+    val saveError by store.error.collectAsStateWithLifecycle()
+    saveError?.let { error -> PalcoDialog("Salvataggio non riuscito", "Ho capito", { store.clearError() }, { store.clearError() }) { Text(error, color = Palco.Ink, fontSize = 16.sp) } }
 
     // dove siamo: "main" (scaletta o repertorio), "live", "edit", "import" o "settings"
     var route by rememberSaveable { mutableStateOf("main") }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var liveAt by rememberSaveable { mutableIntStateOf(0) }
+    var practiceSongId by rememberSaveable { mutableStateOf("") }
+    var practiceSection by rememberSaveable { mutableStateOf("Brano intero") }
+    var practiceSetScope by rememberSaveable { mutableStateOf("") }
     var editId by rememberSaveable { mutableStateOf<String?>(null) }
     var newId by rememberSaveable { mutableStateOf("") }
     var editingSet by rememberSaveable { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = route == "main" && tab != 0) { tab = 0 }
     // bozza che arriva dall'importazione: diventa un brano nuovo nell'editor
     var draft by remember { mutableStateOf<Song?>(null) }
     // backup letto da file, in attesa che si scelga cosa farne
@@ -172,46 +182,59 @@ private fun App(
     var pendingPc by remember { mutableStateOf<PcBatch?>(null) }
     var pendingEdits by remember { mutableStateOf<EditBatch?>(null) }
 
-    fun fetchPc(silent: Boolean) {
+    var syncConflict by remember { mutableStateOf<it.stagepilot.app.data.SyncConflict?>(null) }
+    fun fetchPc(silent: Boolean, policy: String? = null, revision: Int? = null) {
+        if (pcBusy) return
         if (pcAddr.isBlank() || pcCode.isBlank()) {
-            if (!silent) pcStatus = "Scrivi l'indirizzo e il codice."
+            if (!silent) pcStatus = "Scrivi l'indirizzo e il codice dello studio web."
             return
         }
         scope.launch {
             pcBusy = true
+            pcStatus = "Sincronizzazione in corso…"
             try {
-                val inbox = PcClient.fetch(pcAddr, pcCode)
-                val songs = inbox.songs
-                if (songs.isEmpty() && inbox.edits.isEmpty()) {
-                    if (!silent) pcStatus = "Niente di nuovo sul PC."
-                } else {
-                    if (songs.isNotEmpty()) pendingPc = PcBatch(songs, songs.map { it.id })
-                    if (inbox.edits.isNotEmpty()) pendingEdits = EditBatch(inbox.edits, inbox.editIds)
-                    pcStatus = listOfNotNull(
-                        songs.takeIf { it.isNotEmpty() }?.let { "${it.size} ${if (it.size == 1) "brano" else "brani"}" },
-                        inbox.edits.takeIf { it.isNotEmpty() }?.let { "${it.size} ${if (it.size == 1) "modifica" else "modifiche"}" },
-                    ).joinToString(" e ") + " sul PC."
-                }
-            } catch (e: PcException) {
-                if (!silent) pcStatus = e.message ?: "Errore"
-            } finally {
-                pcBusy = false
-            }
+                val sent = store.db.value
+                val address = pcAddr
+                val code = pcCode
+                val merged = PcClient.sync(address, code, sent, store.syncBase(), policy, revision)
+                check(address == pcAddr && code == pcCode) { "Il collegamento al PC è cambiato. Sincronizza di nuovo." }
+                store.acceptSync(merged, sent)
+                pcStatus = "PC e tablet sono aggiornati."
+                syncConflict = null
+            } catch (e: it.stagepilot.app.data.SyncConflict) {
+                syncConflict = e
+                pcStatus = "Scegli come risolvere le modifiche in conflitto."
+            } catch (e: Exception) {
+                pcStatus = e.message ?: "Sincronizzazione non riuscita. I dati locali sono disponibili."
+            } finally { pcBusy = false }
         }
     }
 
-    // all'apertura dell'app: se è configurato, si guarda se il PC ha qualcosa in coda (senza disturbare se non c'è)
-    LaunchedEffect(Unit) { fetchPc(silent = true) }
+    // The tablet stays autonomous. Sync only starts from the user's button.
+    LaunchedEffect(db) {
+        kotlinx.coroutines.delay(1000)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            AutoBackup.saveLocal(context, store.exportJson())
+        }
+    }
 
-    // copia di sicurezza: una al giorno nella memoria del tablet, e una sul PC quando il database è cambiato
-    LaunchedEffect(Unit) {
-        val json = store.exportJson()
-        AutoBackup.saveLocal(context, json)
-        if (pcAddr.isNotBlank() && pcCode.isNotBlank()) {
-            val h = AutoBackup.hash(json)
-            if (prefs.getString("backupHash", "") != h) {
-                runCatching { PcClient.uploadBackup(pcAddr, pcCode, json) }
-                    .onSuccess { prefs.edit().putString("backupHash", h).apply() }
+    syncConflict?.let { conflict ->
+        PalcoDialog("Modifiche da confrontare", "Tieni quelle del tablet", {
+            syncConflict = null
+            fetchPc(false, "device", conflict.revision)
+        }, { syncConflict = null; pcStatus = "Sincronizzazione annullata. Nessun dato è stato sostituito." }) {
+            Column {
+                Text("Alcune informazioni sono cambiate da entrambe le parti. La scelta riguarda solo queste; tutte le altre modifiche vengono unite.", color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp)
+                conflict.paths.take(6).forEach { path ->
+                    val bits = path.split('/')
+                    val title = db.bands.flatMap { it.songs }.firstOrNull { it.id in bits }?.title ?: "Libreria"
+                    val field = mapOf("bpm" to "BPM", "body" to "testo e accordi", "title" to "titolo", "items" to "ordine della scaletta", "practice" to "appunto di prova", "key" to "tonalità", "status" to "preparazione")[bits.last()] ?: "informazioni"
+                    Text("• $title: $field", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+                GhostButton("Tieni quelle del PC", Modifier.padding(top = 15.dp)) {
+                    syncConflict = null
+                    fetchPc(false, "pc", conflict.revision)
+                }
             }
         }
     }
@@ -306,6 +329,15 @@ private fun App(
         )
 
         "live" -> LiveScreen(db = db, startIndex = liveAt, store = store, onClose = { route = "main" })
+        "passage" -> {
+            val song = band.song(practiceSongId)
+            if (song == null) route = "main" else {
+                val focus = song.copy(body = it.stagepilot.app.core.passageBody(song.body, practiceSection))
+                val set = it.stagepilot.app.data.SetList("practice-view", song.title, listOf(SetItem("song", id = song.id)))
+                val preview = band.copy(songs = band.songs.map { if (it.id == song.id) focus else it }, sets = listOf(set), cur = set.id)
+                LiveScreen(db.copy(bands = db.bands.map { if (it.id == band.id) preview else it }), 0, store) { route = "main"; tab = 3 }
+            }
+        }
 
         "edit" -> {
             val song = band.song(editId)
@@ -330,7 +362,10 @@ private fun App(
         else -> Column(Modifier.fillMaxSize().background(Palco.Pitch)) {
             Box(Modifier.weight(1f)) {
             when (tab) {
-            0 -> SetlistScreen(
+            0 -> HomeScreen(db, onStage = { setId -> store.updateBand { it.copy(cur = setId) }; liveAt = 0; route = "live" },
+                onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
+                onConcerts = { tab = 4 }, onPractice = { practiceSetScope = ""; tab = 3 }, onSettings = { tab = 5 })
+            2 -> SetlistScreen(
             db = db,
             editing = editingSet,
             onOpen = { liveAt = it; route = "live" },
@@ -347,17 +382,19 @@ private fun App(
                 store.updateItems { items -> items.mapIndexed { j, x -> if (j == i && x.isMark) x.copy(label = label, dur = dur) else x } }
             },
             onShare = { shareChoice = true },
-            onSettings = { tab = 2 },
+            onSettings = { tab = 5 },
         )
             1 -> RepertoireScreen(
             db = db,
             onOpenSong = { id -> editId = id; route = "edit" },
             onNewSong = { editId = null; draft = null; newId = store.newId("s"); route = "edit" },
             onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
-            onSettings = { tab = 2 },
+            onSettings = { tab = 5 },
             onSort = { s -> store.updateOptions { it.copy(sort = s) } },
             onDeleteSong = { id -> store.deleteSong(id) },
         )
+            3 -> GuidedPracticeScreen(db, store, onPassage = { song, section -> practiceSongId = song; practiceSection = section; route = "passage" }, onSettings = { tab = 5 }, scopeSetId = practiceSetScope)
+            4 -> ConcertsScreen(db, store, onStage = { setId -> store.updateBand { it.copy(cur = setId) }; liveAt = 0; route = "live" }, onPractice = { setId -> practiceSetScope = setId; tab = 3 }, onSettings = { tab = 5 })
             else -> SettingsScreen(
                     db = db,
                     store = store,
@@ -372,6 +409,7 @@ private fun App(
                     pcStatus = pcStatus,
                     pcBusy = pcBusy,
                     onPcSave = { a, c ->
+                        if (a != pcAddr || c != pcCode) store.clearSyncBase()
                         pcAddr = a; pcCode = c
                         prefs.edit().putString("addr", a).putString("code", c).apply()
                     },
@@ -379,7 +417,7 @@ private fun App(
                 )
             }
             }
-            TabBar(tab, onSelect = { tab = it })
+            TabBar(tab, onSelect = { if (it == 3) practiceSetScope = ""; tab = it })
         }
     }
 

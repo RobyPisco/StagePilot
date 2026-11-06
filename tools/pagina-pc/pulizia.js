@@ -17,6 +17,10 @@
     /^\s*(Rating|Difficulty|Views|Favorites)\b/i
   ];
   var SECTION = /^\s*\[([^\[\]]+)\]\s*$/;
+  function isSection(line) {
+    var match = SECTION.exec(line);
+    return !!match && !BL.isChord(BL.toEnglish(match[1].trim()));
+  }
 
   /** In una riga a battute `| D | % | % | G |` il `%` vuol dire «come la battuta prima»: lo si scrive per esteso,
    *  così in live si legge D D D G e non c'è niente da interpretare. */
@@ -45,7 +49,7 @@
     var lines = String(raw || '').replace(/\r\n?/g, '\n').split('\n');
     // i crediti ("Words & Music by…") si tolgono solo prima della prima sezione, e solo se le sezioni ci sono:
     // in un testo senza intestazioni la prima riga potrebbe essere cantata
-    var hasSection = lines.some(function (l) { return SECTION.test(l); });
+    var hasSection = lines.some(function (l) { return isSection(l); });
     var seenSection = false;
 
     String(raw || '').replace(/\r\n?/g, '\n').split('\n').forEach(function (l) {
@@ -63,7 +67,7 @@
         else if (n === 'capo' && !meta.capo) meta.capo = v;
         removed.header++; return;
       }
-      if (SECTION.test(l)) seenSection = true;
+      if (isSection(l)) seenSection = true;
       if (hasSection && !seenSection && CREDIT.test(l)) { removed.junk++; return; }
       for (var i = 0; i < JUNK.length; i++) if (JUNK[i].test(l)) { removed.junk++; return; }
       if (dropTab && isTabLine(l)) { removed.tab++; return; }
@@ -73,10 +77,10 @@
     // sezioni rimaste vuote (erano solo tablatura): via l'intestazione
     var out = [];
     for (var j = 0; j < keep.length; j++) {
-      if (SECTION.test(keep[j])) {
+      if (isSection(keep[j])) {
         var k2 = j + 1;
         while (k2 < keep.length && !keep[k2].trim()) k2++;
-        if (k2 >= keep.length || SECTION.test(keep[k2])) { removed.emptySections++; continue; }
+        if (k2 >= keep.length || isSection(keep[k2])) { removed.emptySections++; continue; }
       }
       out.push(keep[j]);
     }

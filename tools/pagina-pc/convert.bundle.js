@@ -124,7 +124,7 @@ var BL = (() => {
         continue;
       }
       const sec = secOnly(line);
-      if (sec && !isChordLine(line)) {
+      if (sec && !isChord(toEnglish(sec[1].trim()))) {
         out.push("# " + sec[1].trim());
         i++;
         continue;

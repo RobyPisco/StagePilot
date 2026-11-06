@@ -65,6 +65,9 @@ data class Gig(val id: String, val title: String, val date: String = "", val tim
 data class Rehearsal(val id: String, val date: String, val seconds: Int, val songIds: List<String> = emptyList(), val notes: String = "")
 
 @Serializable
+data class PracticeTask(val id: String, val songId: String, val section: String = "Brano intero", val goal: String, val role: String = "Tutti", val decision: String = "", val done: Boolean = false)
+
+@Serializable
 data class SetItem(
     /** "song" oppure "mark" (segnaposto: pausa, cambio chitarra…) */
     val type: String,
@@ -88,6 +91,7 @@ data class Band(
     val cur: String = "",
     val events: List<Gig> = emptyList(),
     val rehearsals: List<Rehearsal> = emptyList(),
+    val practiceTasks: List<PracticeTask> = emptyList(),
 ) {
     val curSet: SetList? get() = sets.firstOrNull { it.id == cur } ?: sets.firstOrNull()
     fun song(id: String?): Song? = songs.firstOrNull { it.id == id }

@@ -144,23 +144,28 @@ fun SettingsScreen(
                     GhostButton("Esporta") { onExport() }
                     GhostButton("Importa") { onImport() }
                 }
+                val recoveryContext = androidx.compose.ui.platform.LocalContext.current
+                GhostButton("Annulla ultima modifica") {
+                    val restored = store.undoLast()
+                    android.widget.Toast.makeText(recoveryContext, if (restored) "Stato precedente ripristinato" else "Non ci sono modifiche da annullare", android.widget.Toast.LENGTH_SHORT).show()
+                }
 
                 // ── brani dal PC ──
-                Section("Brani dal PC")
+                Section("Studio web")
                 Hint(
-                    "Sul PC apri la pagina di StagePilot (tools\\pagina-pc\\avvia.cmd): lì scrivi testo, BPM e dati, e premi Invia. " +
-                        "Qui metti una volta sola l'indirizzo e il codice che la pagina mostra. StagePilot controlla da solo " +
-                        "ogni volta che si apre, se telefono e PC sono sulla stessa Wi-Fi.",
+                    "Sul PC avvia StagePilot.cmd. Nello studio web scegli Collega Android: trovi indirizzo e codice. " +
+                        "Inseriscili qui e tocca Sincronizza. PC e tablet devono stare sulla stessa Wi-Fi. " +
+                        "Se hai modificato lo stesso campo da entrambe le parti, scegli quale versione tenere.",
                 )
                 PalcoField(
                     addr, { addr = it; onPcSave(it, code) }, "Indirizzo del PC", supporting = "es. 192.168.178.32:8765",
                 )
                 PalcoField(
                     code, { code = it.filter(Char::isDigit).take(6); onPcSave(addr, code) }, "Codice",
-                    keyboard = KeyboardType.Number, supporting = "4 cifre, le mostra la pagina",
+                    keyboard = KeyboardType.Number, supporting = "6 cifre, le mostra lo studio web",
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    GhostButton(if (pcBusy) "Cerco…" else "Scarica") { if (!pcBusy) onPcFetch() }
+                    GhostButton(if (pcBusy) "Sincronizzo…" else "Sincronizza") { if (!pcBusy) onPcFetch() }
                     if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 }
 

@@ -68,13 +68,16 @@ fun EditorScreen(
     var capo by rememberSaveable(key) { mutableStateOf(src?.capo?.toString() ?: "0") }
     var lead by rememberSaveable(key) { mutableStateOf(src?.lead?.toString() ?: "0") }
     var body by rememberSaveable(key) { mutableStateOf(src?.body ?: "") }
+    var readiness by rememberSaveable(key) { mutableStateOf(src?.status ?: "study") }
+    var practice by rememberSaveable(key) { mutableStateOf(src?.practice ?: "") }
     var noteAll by rememberSaveable(key) { mutableStateOf(src?.notes?.get("Tutti") ?: "") }
     var noteMe by rememberSaveable(key) { mutableStateOf(src?.notes?.get(band.me) ?: "") }
     var inSet by rememberSaveable(key) { mutableStateOf(inSetInitial) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     val durOk = dur.isBlank() || secs(dur) > 0
-    val canSave = title.isNotBlank() && durOk
+    val bpmOk = bpm.isBlank() || bpm.toIntOrNull() in 20..400
+    val canSave = title.isNotBlank() && durOk && bpmOk
 
     fun save() {
         val notes = (src?.notes ?: emptyMap()).toMutableMap().apply {
@@ -92,6 +95,8 @@ fun EditorScreen(
             lead = (lead.toIntOrNull() ?: 0).coerceIn(0, 60),
             body = normalizeBody(body),
             notes = notes,
+            status = readiness,
+            practice = practice.trim(),
         )
         onSave(saved, inSet)
     }
@@ -130,13 +135,16 @@ fun EditorScreen(
                 PalcoField(artist, { artist = it }, "Artista")
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PalcoField(tone, { tone = it }, "Tonalità", modifier = Modifier.weight(1f), supporting = "Am, Do, F#m…")
-                    PalcoField(bpm, { bpm = it.filter(Char::isDigit).take(3) }, "BPM", modifier = Modifier.weight(1f), keyboard = KeyboardType.Number)
+                    PalcoField(bpm, { bpm = it.filter(Char::isDigit).take(3) }, "BPM", modifier = Modifier.weight(1f), keyboard = KeyboardType.Number, error = !bpmOk)
                     PalcoField(
                         dur, { dur = it.filter { c -> c.isDigit() || c == ':' }.take(5) }, "Durata", modifier = Modifier.weight(1f),
                         keyboard = KeyboardType.Text, supporting = "3:40", error = !durOk,
                     )
                 }
                 PalcoField(tags, { tags = it }, "Tag", supporting = "separati da virgola: originale, lenta")
+                Text("PREPARAZIONE", color = Palco.Purple, fontFamily = Sans, fontSize = 12.sp)
+                Segmented(listOf("Da studiare", "Da ripassare", "Pronto"), listOf("study", "rehearse", "ready").indexOf(readiness).coerceAtLeast(0)) { readiness = listOf("study", "rehearse", "ready")[it] }
+                PalcoField(practice, { practice = it }, "Appunto per la prossima prova", singleLine = false, minLines = 2)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PalcoField(
                         capo, { capo = it.filter(Char::isDigit).take(2) }, "Capotasto", modifier = Modifier.weight(1f),
@@ -202,7 +210,7 @@ fun EditorScreen(
         onDismiss = { confirmDelete = false },
     ) {
         Text(
-            "«${song?.title}» sparisce dal repertorio e da tutte le scalette. Non si può annullare.",
+            "«${song?.title}» sparisce dal repertorio e da tutte le scalette. Puoi recuperarlo da Impostazioni → Backup → Annulla ultima modifica.",
             color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
         )
     }

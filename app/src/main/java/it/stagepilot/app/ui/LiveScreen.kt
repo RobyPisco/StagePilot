@@ -77,6 +77,7 @@ import it.stagepilot.app.data.DB
 import it.stagepilot.app.data.Entry
 import it.stagepilot.app.data.Store
 import it.stagepilot.app.data.entries
+import it.stagepilot.app.data.SetItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -91,16 +92,21 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     if (entries.isEmpty()) { onClose(); return }
     val ord = ordinals(entries)
 
-    var index by rememberSaveable { mutableIntStateOf(startIndex.coerceIn(0, entries.lastIndex)) }
+    var index by rememberSaveable(band.id, band.cur) { mutableIntStateOf(startIndex.coerceIn(0, entries.lastIndex)) }
     var playing by remember { mutableStateOf(false) }
     var locked by remember { mutableStateOf(false) }
     var struct by remember { mutableStateOf(false) }
     var toolsOpen by rememberSaveable { mutableStateOf(false) }
+    var overview by remember { mutableStateOf(false) }
+    var requestSong by remember { mutableStateOf(false) }
     var elapsed by remember { mutableIntStateOf(0) }
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val entry = entries[index.coerceIn(0, entries.lastIndex)]
     val next = entries.getOrNull(index + 1)
+    var trackElapsed by remember(index) { mutableIntStateOf(0) }
+    LaunchedEffect(index) { while (true) { delay(1000); trackElapsed++ } }
+    val remaining = (entries.drop(index).sumOf { when (it) { is Entry.Track -> secs(it.song.dur); is Entry.Mark -> secs(it.dur) } } - trackElapsed).coerceAtLeast(0)
 
     // lo schermo resta acceso per tutta la durata del set
     val view = LocalView.current
@@ -184,7 +190,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                     is Entry.Track -> {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                ord[index].toString().padStart(2, '0'), color = Palco.Amber, fontFamily = Mono,
+                                ord[index.coerceIn(0, ord.lastIndex)].toString().padStart(2, '0'), color = Palco.Amber, fontFamily = Mono,
                                 fontWeight = FontWeight.SemiBold, fontSize = 18.sp,
                             )
                             Spacer(Modifier.width(8.dp))
@@ -288,6 +294,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
+            if (band.cur != "practice-view") GhostButton("Regia · ~${mmss(remaining)}") { overview = true }
             Row(
                 Modifier.clickable { toolsOpen = !toolsOpen }.heightIn(min = 44.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -361,6 +368,43 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             Control(Ic.Lock, "Blocca", active = locked, alwaysOn = true) { locked = !locked }
         }
     }
+
+    if (overview) PalcoDialog("Regia della serata", "", null, { overview = false }) {
+        Column {
+            Text("${mmss(elapsed)} trascorsi · circa ${mmss(remaining)} dal brano corrente alla fine del set", color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp)
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 340.dp).padding(top = 13.dp)) {
+                items(entries.size) { n ->
+                    val e = entries[n]
+                    val name = when (e) { is Entry.Track -> e.song.title; is Entry.Mark -> e.label }
+                    val detail = when (e) { is Entry.Track -> listOfNotNull(e.song.key.takeIf { it.isNotBlank() }, e.song.bpm?.let { "$it BPM" }, e.song.dur.takeIf { it.isNotBlank() }).joinToString(" · "); is Entry.Mark -> "Pausa · ${e.dur}" }
+                    Column(Modifier.fillMaxWidth().clickable { playing = false; index = n; overview = false }.padding(vertical = 11.dp)) {
+                        Text("${if (n == index) "▶ " else ""}${n + 1}. $name", color = if (n == index) Palco.Amber else Palco.Ink, fontFamily = Sans, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text(detail, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp)
+                    }
+                }
+            }
+            GhostButton("+ Richiesta fuori scaletta", Modifier.padding(top = 15.dp)) { overview = false; requestSong = true }
+        }
+    }
+    if (requestSong) PalcoDialog("Richiesta dal pubblico", "", null, { requestSong = false }) {
+        val used = band.curSet?.items.orEmpty().mapNotNull { it.id }.toSet()
+        val available = band.songs.filter { it.id !in used }
+        Column {
+            Text("Scegli dal repertorio: il brano entra in fondo alla scaletta e si apre subito.", color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp)
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 340.dp)) {
+                items(available.size) { n ->
+                    val s = available[n]
+                    Text(s.title, color = Palco.Ink, fontFamily = Sans, fontSize = 19.sp, modifier = Modifier.fillMaxWidth().clickable {
+                        val before = store.db.value.band.entries().size
+                        store.updateItems { it + SetItem("song", id = s.id) }
+                        val after = store.db.value.band.entries().size
+                        if (after > before) { playing = false; index = after - 1; requestSong = false }
+                    }.padding(vertical = 14.dp))
+                }
+            }
+            if (available.isEmpty()) Text("Tutti i brani sono già nella scaletta: puoi raggiungerli da Regia.", color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -389,7 +433,7 @@ private fun SheetLineView(line: SheetLine, fs: Int) {
                         )
                         if (anyText) Text(
                             s.text.ifEmpty { " " }, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Medium,
-                            fontSize = fs.sp, softWrap = false,
+                            fontSize = fs.sp, softWrap = true,
                         )
                     }
                 }

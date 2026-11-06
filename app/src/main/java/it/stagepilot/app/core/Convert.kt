@@ -104,12 +104,12 @@ fun tabToChordPro(text: String?): String {
         val dir = chordProDirective(line)
         if (dir != null) {
             if (dir.name in CP_COMMENTS && dir.value.isNotEmpty()) out.add("# " + dir.value)
-            else CP_SECTIONS[dir.name]?.let { out.add("# $it") }
+            else CP_SECTIONS[dir.name]?.let { out.add("# " + dir.value.ifBlank { it }) }
             // le altre direttive (title, artist, key, capo, tempo, eoc…) si leggono e si scartano
             i++; continue
         }
         val sec = SEC_ONLY.find(line)
-        if (sec != null && !isChordLine(line)) { out.add("# " + sec.groupValues[1].trim()); i++; continue }
+        if (sec != null && !isChord(toEnglish(sec.groupValues[1].trim()))) { out.add("# " + sec.groupValues[1].trim()); i++; continue }
         if (isChordLine(line)) {
             val run = arrayListOf(line)
             var j = i + 1

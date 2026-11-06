@@ -13,16 +13,18 @@ import it.stagepilot.app.R
    per il buio di un palco: contrasto massimo, niente decorazioni. I valori
    sono quelli della proposta A del restyling. */
 object Palco {
-    val Pitch = Color(0xFF0E0D0B)
-    val Panel = Color(0xFF171512)
-    val Raise = Color(0xFF211E19)
-    val Line = Color(0xFF2E2A23)
-    val Outline = Color(0xFF3F392F)
-    val Amber = Color(0xFFFFB000)
-    val OnAmber = Color(0xFF1A1200)
-    val Ink = Color(0xFFEDE7DA)
-    val Dim = Color(0xFFA39A8B)
-    val AmberDeep = Color(0xFF3A2D00)
+    val Pitch = Color(0xFF101114)
+    val Panel = Color(0xFF191B20)
+    val Raise = Color(0xFF22252B)
+    val Line = Color(0xFF2B2E35)
+    val Outline = Color(0xFF3B4452)
+    val Amber = Color(0xFF7FB7FF)
+    val OnAmber = Color(0xFF0B1B33)
+    val Ink = Color(0xFFF2F1ED)
+    val Dim = Color(0xFFA3A5AF)
+    val AmberDeep = Color(0xFF1B2B40)
+    val Green = Color(0xFFA2CBB3)
+    val Purple = Color(0xFFB5A5DD)
     val Warn = Color(0xFFFF6B6B)
 }
 

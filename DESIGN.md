@@ -19,8 +19,12 @@ Sono navigabili Oggi, Repertorio, Scalette, Prove, Importazione e Palco. È poss
 - Palco: lettura prima di tutto, controlli essenziali, sezioni riconoscibili, prossimo brano visibile.
 - La schermata iniziale deve aiutare a iniziare a suonare o preparare la prossima prova.
 
-## Stato di implementazione
+## Stato di implementazione — 7 novembre 2026
 
-Il repository contiene la base nativa Kotlin/Compose derivata da Backline, ora con application ID `it.stagepilot.app`, e le prime fondamenta per SQLite e sincronizzazione. Il restyling mostrato nell'anteprima non è ancora portato nelle schermate Compose. La web app collegata, la sincronizzazione e la cronologia richiedono implementazione e verifiche ulteriori. Non distribuire l'APK preliminare come versione finale.
+La direzione azzurra è stata approvata. Android e studio web ora contengono flussi reali collegati a SQLite: importazione, repertorio, scalette, prova guidata, concerti e sincronizzazione. Sul tablet sono presenti nuove schermate Oggi, Prove e Concerti; il Live ha una regia del set e richieste fuori scaletta.
 
-Le risorse della visualizzazione e i caratteri possono richiedere Internet per l'anteprima. Nell'app Android finale i caratteri e le funzioni da palco saranno locali.
+La proposta in `preview/` è la revisione grafica iniziale: resta una dimostrazione e non contiene tutte le funzioni aggiunte. La versione funzionante si avvia da `StagePilot.cmd`, con istruzioni nel README.
+
+Il progetto mantiene alcuni componenti di gestione derivati da Backline. Le differenze di prodotto sono l'agenda con obiettivi per singoli passaggi, decisioni e ruoli; la preparazione delle serate; il collegamento tra prove e concerti e la regia live.
+
+Le risorse e i caratteri della dimostrazione possono richiedere Internet. I caratteri e il lettore Android sono locali; nello studio web i caratteri di sistema restano disponibili se la rete manca.

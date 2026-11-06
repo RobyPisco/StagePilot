@@ -5,6 +5,11 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.serialization.Serializable
+
+class SyncConflict(val paths: List<String>, val revision: Int) : Exception("Le stesse informazioni sono cambiate sul PC e sul tablet.")
+@Serializable private data class SyncRequest(val db: DB, val base: DB? = null, val policy: String? = null, val revision: Int? = null)
+@Serializable private data class SyncResponse(val db: DB? = null, val conflicts: List<String> = emptyList(), val revision: Int = 0, val error: String = "")
 
 /** Un errore da dire a chi usa l'app, in italiano. */
 class PcException(message: String) : Exception(message)
@@ -12,6 +17,22 @@ class PcException(message: String) : Exception(message)
 /* Scarica la coda dei brani dalla pagina del PC (tools/pagina-pc), nella rete di casa. Il PC dà un
    codice di 4 cifre: senza, la coda non si legge. Solo HTTP in chiaro: è la rete di casa. */
 object PcClient {
+    suspend fun sync(address: String, code: String, current: DB, base: String?, policy: String? = null, revision: Int? = null): DB = withContext(Dispatchers.IO) {
+        guard {
+            val c = open(address, code, "/api/sync", post = true)
+            try {
+                val request = SyncRequest(current, base?.let(::decodeBackup), policy, revision)
+                c.outputStream.use { it.write(AppJson.encodeToString(SyncRequest.serializer(), request).toByteArray(Charsets.UTF_8)) }
+                val status = c.responseCode
+                val text = (if (status < 400) c.inputStream else c.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                val response = runCatching { AppJson.decodeFromString(SyncResponse.serializer(), text) }.getOrNull()
+                    ?: throw PcException("Il PC non sta eseguendo StagePilot Studio. Apri StagePilot.cmd sul PC.")
+                if (status == 409 && response.conflicts.isNotEmpty()) throw SyncConflict(response.conflicts, response.revision)
+                if (status != 200) throw PcException(response.error.ifBlank { "Il PC non ha accettato la sincronizzazione ($status)." })
+                response.db ?: throw PcException("Il PC non ha restituito una libreria valida.")
+            } finally { c.disconnect() }
+        }
+    }
     fun baseUrl(address: String): String {
         val a = address.trim().removePrefix("http://").trimEnd('/')
         return "http://" + if (':' in a) a else "$a:8765"

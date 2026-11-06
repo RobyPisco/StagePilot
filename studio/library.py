@@ -4,10 +4,11 @@ import json
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 MISSING = object()
-ENTITY_LISTS = {'bands', 'songs', 'sets', 'events', 'rehearsals'}
+ENTITY_LISTS = {'bands', 'songs', 'sets', 'events', 'rehearsals', 'practiceTasks'}
 
 def validate_db(db):
     if not isinstance(db, dict) or not isinstance(db.get('bands'), list) or not db['bands']:
@@ -19,8 +20,10 @@ def validate_db(db):
         if len(keys) != len(set(keys)): raise ValueError('Identificativi duplicati.')
     ids(db['bands'])
     for band in db['bands']:
-        for name in ('songs', 'sets', 'events', 'rehearsals'): ids(band.get(name, []))
+        for name in ('songs', 'sets', 'events', 'rehearsals', 'practiceTasks'): ids(band.get(name, []))
         have = {s['id'] for s in band.get('songs', [])}
+        for task in band.get('practiceTasks', []):
+            if task.get('songId') not in have or not isinstance(task.get('goal'), str) or not task['goal'].strip(): raise ValueError('Passaggio di prova non valido.')
         for song in band.get('songs', []):
             if not isinstance(song.get('title', ''), str) or not isinstance(song.get('body', ''), str): raise ValueError('Titolo o testo non valido.')
             if song.get('bpm') not in (None, '') and (type(song['bpm']) is not int or not 20 <= song['bpm'] <= 400): raise ValueError('BPM fuori intervallo (20–400).')
@@ -37,6 +40,7 @@ def shared_view(db):
     result.pop('opt', None)
     result.pop('curBand', None)
     for band in result.get('bands', []):
+        band.setdefault('practiceTasks', [])
         band.pop('me', None)
         band.pop('cur', None)
         for s in band.get('songs', []):
@@ -90,11 +94,13 @@ def merge_libraries(base, device, pc, policy=None):
     # A deletion wins over dangling references, independently of arrival order.
     for band in shared.get('bands', []):
         have = {s['id'] for s in band.get('songs', [])}
+        if 'practiceTasks' in band: band['practiceTasks'] = [t for t in band['practiceTasks'] if t.get('songId') in have]
         for st in band.get('sets', []): st['items'] = [i for i in st.get('items', []) if i.get('type') == 'mark' or i.get('id') in have]
     return personal_view(shared, device), personal_view(shared, pc), conflicts
 
 class Library:
     def __init__(self, path, seed):
+        self.seed = copy.deepcopy(seed)
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -104,10 +110,13 @@ class Library:
             c.execute('CREATE TABLE IF NOT EXISTS history (revision INTEGER PRIMARY KEY, saved_at INTEGER NOT NULL, data TEXT NOT NULL)')
             c.execute('CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
             c.execute('INSERT OR IGNORE INTO state VALUES(1,1,?)', (json.dumps(validate_db(seed), ensure_ascii=False),))
+    @contextmanager
     def connection(self):
         c = sqlite3.connect(self.path, timeout=15)
-        c.execute('PRAGMA foreign_keys=ON')
-        return c
+        try:
+            c.execute('PRAGMA foreign_keys=ON')
+            with c: yield c
+        finally: c.close()
     def get(self):
         with self.lock, self.connection() as c:
             revision, raw = c.execute('SELECT revision,data FROM state WHERE id=1').fetchone()
@@ -123,14 +132,19 @@ class Library:
             c.execute('UPDATE state SET revision=?,data=? WHERE id=1', (rev+1, json.dumps(db, ensure_ascii=False)))
             c.execute('DELETE FROM history WHERE revision NOT IN (SELECT revision FROM history ORDER BY revision DESC LIMIT 40)')
             return {'revision': rev+1, 'db': db}
-    def sync(self, base, device, policy=None):
+    def sync(self, base, device, policy=None, expected_revision=None):
         validate_db(device)
         if base is not None: validate_db(base)
         if policy not in (None, 'device', 'pc'): raise ValueError('Scelta del conflitto non valida.')
         with self.lock:
             current = self.get()
-            merged, canonical, conflicts = merge_libraries(base, device, current['db'], policy)
-            if conflicts and policy is None: return {'conflicts': conflicts}, 409
+            if policy is not None and expected_revision != current['revision']:
+                return {'error': 'Il PC è cambiato dopo la conferma. Sincronizza di nuovo.'}, 409
+            # Only a verified, untouched initial database may be treated as the
+            # first pairing baseline. A populated PC library still needs choices.
+            baseline = current['db'] if base is None and current['revision'] == 1 and current['db'] == self.seed else base
+            merged, canonical, conflicts = merge_libraries(baseline, device, current['db'], policy)
+            if conflicts and policy is None: return {'conflicts': conflicts, 'revision': current['revision']}, 409
             saved = self.save(canonical, current['revision'])
             return {'db': merged, 'revision': saved['revision'], 'conflicts': []}, 200
     def undo(self, expected):

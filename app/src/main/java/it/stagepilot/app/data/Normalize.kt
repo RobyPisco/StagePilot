@@ -37,6 +37,7 @@ fun normalizeBand(b: Band, index: Int = 0): Band {
         name = b.name.ifBlank { "Gruppo ${index + 1}" },
         me = if (b.me in ROLES) b.me else "Tutti",
         songs = songs,
+        practiceTasks = b.practiceTasks.filter { it.songId in known && it.goal.isNotBlank() }.distinctBy { it.id },
         sets = sets,
         cur = if (sets.any { it.id == b.cur }) b.cur else sets.first().id,
     )

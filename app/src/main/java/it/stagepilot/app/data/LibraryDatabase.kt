@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 /** One transaction covers the library, its rollback snapshot and the sync baseline. */
-class LibraryDatabase(context: Context) : SQLiteOpenHelper(context, "stagepilot.sqlite", null, 1) {
+class LibraryDatabase(context: Context, name: String = "stagepilot.sqlite") : SQLiteOpenHelper(context, name, null, 1) {
     init { setWriteAheadLoggingEnabled(true) }
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE meta (id INTEGER PRIMARY KEY CHECK(id=1), data TEXT NOT NULL, sync_base TEXT)")

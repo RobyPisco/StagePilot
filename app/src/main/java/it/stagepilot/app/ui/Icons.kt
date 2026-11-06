@@ -24,6 +24,9 @@ private fun icon(name: String, d: String, filled: Boolean = false): ImageVector 
     }.build()
 
 object Ic {
+    val Home = icon("home", "M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z")
+    val Practice = icon("practice", "M4 9v6M8 5v14M12 8v8M16 3v18M20 9v6")
+    val Calendar = icon("calendar", "M5 5h14a2 2 0 0 1 2 2v13H3V7a2 2 0 0 1 2-2z M3 10h18M7 3v4M17 3v4M7 14h2M12 14h2M7 17h2")
     val Play = icon("play", "M7 4l13 8-13 8z", filled = true)
     val Stop = icon("stop", "M6 6h12v12H6z", filled = true)
     val Prev = icon("prev", "M19 20L9 12l10-8z M5 4v16")

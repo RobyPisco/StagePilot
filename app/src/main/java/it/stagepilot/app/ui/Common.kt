@@ -92,7 +92,7 @@ fun BrandBar(bandName: String, onClick: () -> Unit) {
         ) {
             Text(bandName, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp)
             Spacer(Modifier.width(6.dp))
-            Icon(Ic.Chevron, null, tint = Palco.Dim, modifier = Modifier.size(12.dp))
+            Icon(Ic.Sliders, "Impostazioni", tint = Palco.Dim, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -112,7 +112,7 @@ fun TabBar(selected: Int, onSelect: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().background(Palco.Panel).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
         Row(Modifier.fillMaxWidth()) {
-            listOf(Ic.Struct to "Scaletta", Ic.Note to "Repertorio", Ic.Sliders to "Impostazioni").forEachIndexed { i, (icon, label) ->
+            listOf(Ic.Home to "Oggi", Ic.Note to "Brani", Ic.Struct to "Scalette", Ic.Practice to "Prove", Ic.Calendar to "Concerti").forEachIndexed { i, (icon, label) ->
                 val c = if (i == selected) Palco.Amber else Palco.Dim
                 Column(
                     Modifier.weight(1f).clickable { onSelect(i) }.padding(top = 8.dp, bottom = 8.dp),
