@@ -12,7 +12,7 @@ Sono navigabili Oggi, Repertorio, Scalette, Prove, Importazione e Palco. È poss
 
 ## Direzione
 
-- Grafite quasi nero, ambra per azioni e accordi, lilla per preparazione, verde per stato pronto. Stato sempre accompagnato da testo.
+- Grafite quasi nero, azzurro freddo per azioni e accordi, lilla per preparazione, verde per stato pronto. Stato sempre accompagnato da testo.
 - Android: una schermata per compito, quattro voci principali, modalità palco separata.
 - Web: barra laterale stabile, più spazio per incollare e verificare la conversione.
 - Importazione in tre passaggi: incolla, controlla, salva. Non riscrivere parole, inventare accordi o trattare una tonalità stimata come certa.
