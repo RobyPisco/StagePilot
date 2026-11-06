@@ -221,11 +221,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 )
             }
         }
-        // sotto la testata: una striscia che si accende a ogni battito (bianca sul primo di quattro)
-        if (showBeat && opt.pulse) Box(
-            Modifier.fillMaxWidth().height(10.dp)
-                .background(if (beat.on) (if (beat.accent) Palco.Ink else Palco.Amber) else Palco.Line),
-        ) else Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
 
         // chart
         Box(

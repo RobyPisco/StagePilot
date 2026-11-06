@@ -128,7 +128,7 @@ fun SettingsScreen(
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Palco.Panel).padding(horizontal = 16.dp, vertical = 6.dp)) {
                     Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
                     Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
-                    Toggle("Lampeggio dei BPM", "Una striscia e un cerchio in testata che battono il tempo del brano: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
+                    Toggle("Lampeggio dei BPM", "Un cerchio in testata che batte il tempo del brano: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
                     Toggle("Click del metronomo", "In live tocchi il cerchio del battito per sentire il tic (e di nuovo per fermarlo). Parte sempre spento.", opt.click) { v -> store.updateOptions { it.copy(click = v) } }
                     Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
                     Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
