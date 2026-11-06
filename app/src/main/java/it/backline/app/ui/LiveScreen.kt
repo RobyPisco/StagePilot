@@ -446,30 +446,38 @@ class BeatState {
     var accent by mutableStateOf(false)
 }
 
-/** Fa battere `bpm` (se non è nullo) e, con `sound`, suona il tic. Le attese sono calcolate dall'inizio, non una
- *  dopo l'altra, così il tempo non scivola. Si ferma e riparte da capo a ogni cambio di BPM. */
+/** Fa battere `bpm` (se non è nullo) e, con `sound`, suona il metronomo. Il suono lo conta il thread di `Clicker`;
+ *  qui il lampeggio parte quando il primo colpo arriva alle orecchie e poi segue il suo stesso passo. Le attese sono
+ *  calcolate dall'inizio, non una dopo l'altra, così il tempo non scivola. Si riparte da capo a ogni cambio di BPM
+ *  o quando il suono si accende o si spegne. */
 @Composable
 private fun rememberBeat(bpm: Int?, sound: Boolean): BeatState {
     val state = remember { BeatState() }
     val clicker = remember { Clicker() }
-    DisposableEffect(Unit) { onDispose { clicker.release() } }
-    val soundNow by androidx.compose.runtime.rememberUpdatedState(sound)
-    LaunchedEffect(bpm) {
+    DisposableEffect(Unit) { onDispose { clicker.stop() } }
+    LaunchedEffect(bpm, sound) {
         state.on = false
         if (bpm == null) return@LaunchedEffect
-        val period = 60_000_000_000L / bpm
-        val flash = minOf(140L, period / 2_000_000L)
-        val start = System.nanoTime()
-        var n = 0L
-        while (true) {
-            state.accent = n % 4 == 0L
-            state.on = true
-            if (soundNow) clicker.click(state.accent)
-            delay(flash)
-            state.on = false
-            n++
-            val wait = (start + n * period - System.nanoTime()) / 1_000_000
-            if (wait > 0) delay(wait)
+        try {
+            if (sound) {
+                clicker.start(bpm)
+                delay(clicker.latencyMs)
+            }
+            val period = 60_000_000_000L / bpm
+            val flash = minOf(140L, period / 2_000_000L)
+            val start = System.nanoTime()
+            var n = 0L
+            while (true) {
+                state.accent = n % 4 == 0L
+                state.on = true
+                delay(flash)
+                state.on = false
+                n++
+                val wait = (start + n * period - System.nanoTime()) / 1_000_000
+                if (wait > 0) delay(wait)
+            }
+        } finally {
+            if (sound) clicker.stop()
         }
     }
     return state
