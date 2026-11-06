@@ -10,3 +10,9 @@ tools/pagina-pc/stato.json
 __pycache__/
 tools/pagina-pc/backup/
 backup-tablet/
+
+.tmp/
+web/node_modules/
+web/dist/
+studio/data/
+*.log

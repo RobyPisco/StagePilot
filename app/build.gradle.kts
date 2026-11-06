@@ -6,16 +6,16 @@ plugins {
 }
 
 android {
-    namespace = "it.backline.app"
+    namespace = "it.stagepilot.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "it.backline.app"
-        // Android 10: il Fire HD 8 di prova è LineageOS 17.1 (SDK 29)
+        applicationId = "it.stagepilot.app"
+        // Android 10: il Fire HD 8 di prova Ã¨ LineageOS 17.1 (SDK 29)
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 1
+        versionName = "0.1.0"
     }
 
     buildTypes {

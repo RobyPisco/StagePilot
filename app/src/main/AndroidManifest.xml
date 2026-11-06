@@ -8,9 +8,9 @@
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="Backline"
+        android:label="StagePilot"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Backline">
+        android:theme="@style/Theme.StagePilot">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -21,13 +21,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- "Condividi con Backline": un tab o un ChordPro da qualunque app, o dal PC con adb -->
+            <!-- "Condividi con StagePilot": un tab o un ChordPro da qualunque app, o dal PC con adb -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
-            <!-- una scaletta di Backline mandata come file (WhatsApp, Telegram, posta…) -->
+            <!-- una scaletta di StagePilot mandata come file (WhatsApp, Telegram, posta…) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

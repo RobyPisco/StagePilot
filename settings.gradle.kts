@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "backline-android"
+rootProject.name = "StagePilot"
 include(":app")
