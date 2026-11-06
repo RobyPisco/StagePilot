@@ -20,7 +20,7 @@ L'app web da cui nasce, con la specifica delle funzioni, sta in `D:\progetti\bac
 
 ## Versione e APK da dare agli altri
 
-La versione (ora **0.2.0**, build 2) si cambia in `app/build.gradle.kts` (`versionName`, `versionCode`) e si legge
+La versione (ora **0.3.0**, build 3) si cambia in `app/build.gradle.kts` (`versionName`, `versionCode`) e si legge
 in fondo a Impostazioni. Per salire di versione si alza sempre anche `versionCode`: serve ad Android per
 aggiornare un'app già installata senza perdere i dati.
 
@@ -31,9 +31,23 @@ $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 .\gradlew.bat assembleRelease        # app\build\outputs\apk\release\app-release.apk
 ```
 
-Una copia da distribuire sta in `dist\Backline-0.2.0.apk` (non è nel repo). Per installarla: consentire
+Una copia da distribuire sta in `dist\Backline-0.3.0.apk` (non è nel repo; la stessa è allegata alla release
+`v0.3.0` su GitHub). Per installarla: consentire
 «installa da fonti sconosciute» e aprire il file. Chi ha già una versione firmata con un'altra chiave deve prima
 disinstallarla (e perde i dati: meglio un backup prima).
+
+## Installare Backline (per chi lo riceve)
+
+1. Scarica il file **Backline-0.3.0.apk** (dalla release su GitHub, o come te lo manda chi te lo dà).
+2. Aprilo dal telefono o dal tablet. Android chiede di consentire **«installa da fonti sconosciute»** per l'app da cui
+   lo apri (Chrome, File…): consentilo, poi conferma l'installazione.
+3. Se hai già una versione precedente, l'installazione la **aggiorna** e i tuoi brani restano. Se invece Android dice
+   che il pacchetto è in conflitto, quella versione era firmata con un'altra chiave: disinstallala prima (perdi i dati,
+   quindi esporta un backup da Impostazioni → Backup).
+4. Per avere la scaletta della band: chi la fa tocca **Scaletta → Condividi → File Backline** e te la manda; tu la
+   apri con Backline e ti compare la scaletta pronta, con i brani.
+
+Serve Android 10 o più recente.
 
 ## Compilare e provare
 

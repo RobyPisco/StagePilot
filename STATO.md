@@ -72,9 +72,8 @@ cosa è stato deciso e cosa resta da fare.
    D'ora in poi gli aggiornamenti con `adb install -r` funzionano da questo PC.
 4. **Provare a casa con la Wi-Fi**: «Applica» delle modifiche dal PC, invio e scarico via Wi-Fi, backup sul PC.
 5. **Provare il click a orecchio** (a tempo? ritardo accettabile? volume?).
-6. **APK di rilascio**: `dist\Backline-0.2.0.apk` è la versione di prima (senza grafica iOS, SongBPM, Repertorio,
-   pause, click). Per darla agli altri serve una 0.3.0 (versionCode 3) e un nuovo tag; poi due righe di istruzioni
-   di installazione per la band. Provare la scaletta condivisa con un secondo telefono.
+6. **APK di rilascio 0.3.0** (build 3): `dist\Backline-0.3.0.apk`, allegato alla release `v0.3.0` su GitHub (repo
+   privato). Istruzioni di installazione nel README. Resta da provare la scaletta condivisa con un secondo telefono.
 7. Idee non fatte: pedale Bluetooth (tasti freccia) per girare pagina, riepilogo a fine set (tempo reale contro
    previsto), importare più file insieme sulla pagina PC, anteprima come in Live nel Repertorio, trasposizione prima
    dell'invio, testo senza accordi da LRCLIB, tonalità dedotta migliore (Blondie: F#m invece di D), scaletta in PDF,
