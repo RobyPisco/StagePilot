@@ -89,8 +89,9 @@ fun SetlistScreen(
     onToggleEdit: () -> Unit,
     onRemove: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
-    onAddSong: (String) -> Unit,
-    onAddMark: (String, String) -> Unit,
+    onAddSong: (String, Int) -> Unit,
+    onAddMark: (String, String, Int) -> Unit,
+    onEditMark: (Int, String, String) -> Unit,
     onShare: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -100,6 +101,10 @@ fun SetlistScreen(
 
     var pickSong by rememberSaveable { mutableStateOf(false) }
     var addMark by rememberSaveable { mutableStateOf(false) }
+    // dove si inserisce (posizione nella scaletta); null = in fondo. `chooser`: sta scegliendo cosa inserire
+    var insertAt by rememberSaveable { mutableStateOf<Int?>(null) }
+    var chooser by rememberSaveable { mutableStateOf(false) }
+    var editMark by rememberSaveable { mutableStateOf<Int?>(null) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding()) {
         val wide = maxWidth > maxHeight && maxWidth >= 600.dp
@@ -116,7 +121,7 @@ fun SetlistScreen(
         }
         val list: @Composable (Modifier) -> Unit = { m ->
             LazyColumn(m.dragReorder(listState, drag, editing, handlePx, onMove), state = listState, contentPadding = PaddingValues(top = 6.dp, bottom = 16.dp)) {
-                itemsIndexed(entries) { i, e -> EntryRow(i, e, ord[i], editing, db, entries.size, drag, onOpen, onRemove) }
+                itemsIndexed(entries) { i, e -> EntryRow(i, e, ord[i], editing, db, entries.size, drag, onOpen, onRemove, onInsert = { insertAt = it; chooser = true }, onEditMark = { editMark = it }) }
             }
         }
         val start: @Composable () -> Unit = {
@@ -145,7 +150,7 @@ fun SetlistScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) { SetChips(db, editing, onToggleNotation, onPickSet, onToggleEdit, onShare) }
-                if (editing) EditActions({ pickSong = true }, { addMark = true })
+                if (editing) EditActions({ insertAt = null; pickSong = true }, { insertAt = null; addMark = true })
                 Spacer(Modifier.weight(1f))
                 start()
             }
@@ -159,7 +164,7 @@ fun SetlistScreen(
                     Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) { SetChips(db, editing, onToggleNotation, onPickSet, onToggleEdit, onShare) }
-                if (editing) EditActions({ pickSong = true }, { addMark = true })
+                if (editing) EditActions({ insertAt = null; pickSong = true }, { insertAt = null; addMark = true })
                 list(Modifier.weight(1f))
                 start()
             }
@@ -169,17 +174,62 @@ fun SetlistScreen(
     if (pickSong) {
         val used = band.curSet?.items.orEmpty().filter { it.type == "song" }.mapNotNull { it.id }.toSet()
         val free = band.songs.filter { it.id !in used }
-        PalcoDialog(title = "Aggiungi un brano", confirmText = "", onConfirm = null, onDismiss = { pickSong = false }) {
+        PalcoDialog(title = "Aggiungi un brano", confirmText = "", onConfirm = null, onDismiss = { pickSong = false; insertAt = null }) {
             if (free.isEmpty()) Text(
                 "Tutti i brani del repertorio sono già in scaletta.", color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
             ) else LazyColumn(Modifier.heightIn(max = 360.dp)) {
                 items(free, key = { it.id }) { s ->
                     Column(
-                        Modifier.fillMaxWidth().clickable { onAddSong(s.id); pickSong = false }.padding(vertical = 10.dp),
+                        Modifier.fillMaxWidth().clickable { onAddSong(s.id, insertAt ?: entries.size); pickSong = false; insertAt = null }.padding(vertical = 10.dp),
                     ) {
                         Text(s.title, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                         if (s.artist.isNotBlank()) Text(s.artist, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp)
                     }
+                }
+            }
+        }
+    }
+
+    // «+» tra due righe: cosa si inserisce lì
+    if (chooser) {
+        val at = insertAt ?: entries.size
+        fun quick(label: String, dur: String) { onAddMark(label, dur, at); chooser = false; insertAt = null }
+        PalcoDialog(
+            title = "Inserisci qui", confirmText = "", onConfirm = null,
+            onDismiss = { chooser = false; insertAt = null },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Pausa 5 min", false) { quick("Pausa", "5:00") }
+                    Chip("Pausa 15 min", false) { quick("Pausa", "15:00") }
+                    Chip("Discorso", false) { quick("Discorso", "1:00") }
+                    Chip("Cambio chitarra", false) { quick("Cambio chitarra", "1:00") }
+                }
+                GhostButton("Altro segnaposto…") { chooser = false; addMark = true }
+                GhostButton("Un brano del repertorio") { chooser = false; pickSong = true }
+            }
+        }
+    }
+
+    // toccando una pausa in Modifica: nome e durata
+    editMark?.let { i ->
+        val cur = entries.getOrNull(i) as? Entry.Mark
+        if (cur == null) editMark = null else {
+            var label by rememberSaveable(i) { mutableStateOf(cur.label) }
+            var dur by rememberSaveable(i) { mutableStateOf(cur.dur) }
+            val ok = label.isNotBlank() && (dur.isBlank() || secs(dur) > 0)
+            PalcoDialog(
+                title = "Modifica il segnaposto", confirmText = "Salva",
+                onConfirm = if (ok) ({ onEditMark(i, label.trim(), dur.trim()); editMark = null }) else null,
+                onDismiss = { editMark = null },
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PalcoField(label, { label = it }, "Nome")
+                    PalcoField(
+                        dur, { dur = it.filter { c -> c.isDigit() || c == ':' }.take(5) }, "Durata",
+                        supporting = "es. 5:00, vuoto = nessuna", error = dur.isNotBlank() && secs(dur) == 0,
+                        onDone = if (ok) ({ onEditMark(i, label.trim(), dur.trim()); editMark = null }) else null,
+                    )
                 }
             }
         }
@@ -191,14 +241,15 @@ fun SetlistScreen(
         val ok = label.isNotBlank() && (dur.isBlank() || secs(dur) > 0)
         PalcoDialog(
             title = "Aggiungi un segnaposto", confirmText = "Aggiungi",
-            onConfirm = if (ok) ({ onAddMark(label.trim(), dur.trim()); addMark = false }) else null,
-            onDismiss = { addMark = false },
+            onConfirm = if (ok) ({ onAddMark(label.trim(), dur.trim(), insertAt ?: entries.size); addMark = false; insertAt = null }) else null,
+            onDismiss = { addMark = false; insertAt = null },
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 PalcoField(label, { label = it }, "Nome", supporting = "Pausa, Cambio chitarra, Presentazione…")
                 PalcoField(
                     dur, { dur = it.filter { c -> c.isDigit() || c == ':' }.take(5) }, "Durata", keyboard = KeyboardType.Text,
                     supporting = "es. 5:00", error = dur.isNotBlank() && secs(dur) == 0,
+                    onDone = if (ok) ({ onAddMark(label.trim(), dur.trim(), insertAt ?: entries.size); addMark = false; insertAt = null }) else null,
                 )
             }
         }
@@ -294,23 +345,23 @@ private fun SetChips(
 
 @Composable
 private fun EditActions(onAddSong: () -> Unit, onAddMark: () -> Unit) {
-    Row(
-        Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        GhostButton("+ Brano", onClick = onAddSong)
-        GhostButton("+ Segnaposto", onClick = onAddMark)
+    Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GhostButton("+ Brano", onClick = onAddSong)
+            GhostButton("+ Segnaposto", onClick = onAddMark)
+        }
+        Text("Il + fra le righe inserisce lì. Tocca una pausa per cambiarla.", color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp)
     }
 }
 
 @Composable
 private fun EntryRow(
     i: Int, e: Entry, number: Int, editing: Boolean, db: DB, count: Int, drag: DragState,
-    onOpen: (Int) -> Unit, onRemove: (Int) -> Unit,
+    onOpen: (Int) -> Unit, onRemove: (Int) -> Unit, onInsert: (Int) -> Unit, onEditMark: (Int) -> Unit,
 ) {
     // le righe formano una scheda con gli angoli arrotondati: tondi in alto sulla prima, in basso sull'ultima
     val r = 14.dp
-    val shape = RoundedCornerShape(
+    val shape = if (editing) androidx.compose.ui.graphics.RectangleShape else RoundedCornerShape(
         topStart = if (i == 0) r else 0.dp, topEnd = if (i == 0) r else 0.dp,
         bottomStart = if (i == count - 1) r else 0.dp, bottomEnd = if (i == count - 1) r else 0.dp,
     )
@@ -319,6 +370,7 @@ private fun EntryRow(
         .graphicsLayer { translationY = if (drag.idx == i) drag.offset else 0f }
         .clip(shape).background(if (dragging) Palco.Raise else Palco.Panel)
     Column(Modifier.padding(horizontal = 16.dp)) {
+        if (editing && i == 0) InsertStrip { onInsert(0) }
         when (e) {
             is Entry.Track -> Row(
                 lift.fillMaxWidth().heightIn(min = 60.dp)
@@ -357,7 +409,7 @@ private fun EntryRow(
             }
             is Entry.Mark -> Row(
                 lift.fillMaxWidth().heightIn(min = 50.dp)
-                    .then(if (editing) Modifier else Modifier.clickable { onOpen(i) })
+                    .clickable { if (editing) onEditMark(i) else onOpen(i) }
                     .padding(start = 16.dp, end = if (editing) 4.dp else 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -373,8 +425,23 @@ private fun EntryRow(
                 )
             }
         }
-        if (i < count - 1) Box(Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 16.dp)) {
+        if (editing) InsertStrip { onInsert(i + 1) }
+        else if (i < count - 1) Box(Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 16.dp)) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+        }
+    }
+}
+
+/** Il «+» fra due righe: inserisce lì un brano o un segnaposto. */
+@Composable
+private fun InsertStrip(onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(30.dp).background(Palco.Panel).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(Palco.Line))
+        Box(Modifier.size(24.dp).clip(CircleShape).background(Palco.Raise), contentAlignment = Alignment.Center) {
+            Icon(Ic.Plus, "Inserisci qui", tint = Palco.Amber, modifier = Modifier.size(14.dp))
         }
     }
 }

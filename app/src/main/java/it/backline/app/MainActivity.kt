@@ -339,8 +339,13 @@ private fun App(
             onToggleEdit = { editingSet = !editingSet },
             onRemove = { i -> store.updateItems { items -> items.filterIndexed { j, _ -> j != i } } },
             onMove = { from, to -> store.updateItems { items -> moveItem(items, from, to) } },
-            onAddSong = { id -> store.updateItems { it + SetItem("song", id = id) } },
-            onAddMark = { label, dur -> store.updateItems { it + SetItem("mark", label = label, dur = dur) } },
+            onAddSong = { id, at -> store.updateItems { it.toMutableList().apply { add(at.coerceIn(0, size), SetItem("song", id = id)) } } },
+            onAddMark = { label, dur, at ->
+                store.updateItems { it.toMutableList().apply { add(at.coerceIn(0, size), SetItem("mark", label = label, dur = dur)) } }
+            },
+            onEditMark = { i, label, dur ->
+                store.updateItems { items -> items.mapIndexed { j, x -> if (j == i && x.isMark) x.copy(label = label, dur = dur) else x } }
+            },
             onShare = { shareChoice = true },
             onSettings = { tab = 2 },
         )

@@ -46,6 +46,8 @@ fun PalcoField(
     keyboard: KeyboardType = KeyboardType.Text,
     supporting: String? = null,
     error: Boolean = false,
+    /** se c'è, il tasto «fatto» della tastiera lo esegue (nei dialoghi: salva) */
+    onDone: (() -> Unit)? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -56,7 +58,8 @@ fun PalcoField(
         minLines = minLines,
         isError = error,
         supportingText = supporting?.let { { Text(it, fontFamily = Sans, fontSize = 12.sp) } },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (onDone != null) androidx.compose.ui.text.input.ImeAction.Done else androidx.compose.ui.text.input.ImeAction.Default),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onDone?.invoke() }),
         textStyle = TextStyle(
             color = Palco.Ink, fontSize = if (mono) 15.sp else 17.sp,
             fontFamily = if (mono) Mono else Condensed, fontWeight = FontWeight.Medium,

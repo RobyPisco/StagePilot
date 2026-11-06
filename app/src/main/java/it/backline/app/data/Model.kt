@@ -91,7 +91,9 @@ data class Options(
     val bar: Boolean = true,
     val timer: Boolean = true,
     /** puntino che pulsa al tempo dei BPM del brano, in live */
-    val pulse: Boolean = false,
+    val pulse: Boolean = true,
+    /** il "tic" del metronomo, che si accende dal Live toccando l'indicatore del battito */
+    val click: Boolean = false,
     val caps: Boolean = false,
     val roots: Boolean = false,
     val plain: Boolean = false,

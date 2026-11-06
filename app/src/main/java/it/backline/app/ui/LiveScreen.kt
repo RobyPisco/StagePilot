@@ -119,6 +119,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     }
     LaunchedEffect(index) { scroll.scrollTo(0) }
 
+    // battito: lampeggio (striscia e cerchio) e, se lo accendi toccando il cerchio, il tic del metronomo
+    val songBpm = (entry as? Entry.Track)?.song?.bpm?.takeIf { it in 20..300 }
+    val showBeat = songBpm != null && (opt.pulse || opt.click)
+    var clicking by remember(index) { mutableStateOf(false) }       // a ogni brano si riparte in silenzio
+    val beat = rememberBeat(songBpm.takeIf { showBeat }, sound = clicking && opt.click)
+
     // scorrimento automatico: il chart arriva in fondo quando finisce il brano
     // il brano com'è adesso: la velocità si può cambiare mentre scorre e deve valere subito,
     // non alla prossima pressione di Play
@@ -203,9 +209,10 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                     }
                 }
             }
-            if (entry is Entry.Track && opt.pulse) entry.song.bpm?.takeIf { it in 20..300 }?.let { bpm ->
-                BeatDot(bpm, Modifier.padding(end = 14.dp))
-            }
+            if (showBeat) BeatDot(
+                beat, soundAvailable = opt.click, soundOn = clicking,
+                onToggleSound = { clicking = !clicking }, modifier = Modifier.padding(end = 14.dp),
+            )
             if (entry is Entry.Track) {
                 val k = keyLabel(entry.song, opt.notation, opt.accid)
                 if (k.isNotEmpty()) Text(
@@ -214,7 +221,11 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 )
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+        // sotto la testata: una striscia che si accende a ogni battito (bianca sul primo di quattro)
+        if (showBeat && opt.pulse) Box(
+            Modifier.fillMaxWidth().height(10.dp)
+                .background(if (beat.on) (if (beat.accent) Palco.Ink else Palco.Amber) else Palco.Line),
+        ) else Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
 
         // chart
         Box(
@@ -433,31 +444,60 @@ private fun RowScope.Control(
     }
 }
 
-/** Un puntino che si accende a tempo coi BPM; il primo battito ogni quattro è più grande (4/4). Le attese
- *  sono calcolate dall'inizio, non una dopo l'altra, così il tempo non scivola. */
+/** Il battito del brano: `on` è vero per un attimo a ogni colpo, `accent` sul primo di ogni quattro (4/4). */
+class BeatState {
+    var on by mutableStateOf(false)
+    var accent by mutableStateOf(false)
+}
+
+/** Fa battere `bpm` (se non è nullo) e, con `sound`, suona il tic. Le attese sono calcolate dall'inizio, non una
+ *  dopo l'altra, così il tempo non scivola. Si ferma e riparte da capo a ogni cambio di BPM. */
 @Composable
-private fun BeatDot(bpm: Int, modifier: Modifier = Modifier) {
-    var on by remember { mutableStateOf(false) }
-    var accent by remember { mutableStateOf(false) }
+private fun rememberBeat(bpm: Int?, sound: Boolean): BeatState {
+    val state = remember { BeatState() }
+    val clicker = remember { Clicker() }
+    DisposableEffect(Unit) { onDispose { clicker.release() } }
+    val soundNow by androidx.compose.runtime.rememberUpdatedState(sound)
     LaunchedEffect(bpm) {
+        state.on = false
+        if (bpm == null) return@LaunchedEffect
         val period = 60_000_000_000L / bpm
+        val flash = minOf(140L, period / 2_000_000L)
         val start = System.nanoTime()
         var n = 0L
         while (true) {
-            accent = n % 4 == 0L
-            on = true
-            delay(90)
-            on = false
+            state.accent = n % 4 == 0L
+            state.on = true
+            if (soundNow) clicker.click(state.accent)
+            delay(flash)
+            state.on = false
             n++
             val wait = (start + n * period - System.nanoTime()) / 1_000_000
             if (wait > 0) delay(wait)
         }
     }
-    val size = if (accent) 22.dp else 16.dp
-    Box(modifier.size(24.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
-                .background(if (on) Palco.Amber else Palco.Line),
+    return state
+}
+
+/** Il cerchio del battito, in testata: grande, si accende a tempo. Se il click è abilitato, toccarlo accende
+ *  o spegne il tic (con la scritta CLICK e un anello quando suona). */
+@Composable
+private fun BeatDot(beat: BeatState, soundAvailable: Boolean, soundOn: Boolean, onToggleSound: () -> Unit, modifier: Modifier = Modifier) {
+    val size = if (beat.accent) 38.dp else 30.dp
+    Column(
+        modifier.then(if (soundAvailable) Modifier.clickable(onClick = onToggleSound) else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (beat.on) (if (beat.accent) Palco.Ink else Palco.Amber) else Palco.Raise)
+                    .then(if (soundOn) Modifier.border(3.dp, Palco.Amber, androidx.compose.foundation.shape.CircleShape) else Modifier),
+            )
+        }
+        if (soundAvailable) Text(
+            if (soundOn) "CLICK" else "click", color = if (soundOn) Palco.Amber else Palco.Dim,
+            fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
         )
     }
 }
