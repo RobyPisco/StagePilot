@@ -308,7 +308,7 @@ function App() {
         <main className="sp-login">
           <div className="sp-logo">
             <span className="sp-logo-mark">
-              <RadioTower />
+              <img src="/stagepilot-icon.png" alt="" width="40" height="40" />
             </span>
             StagePilot Studio
           </div>
@@ -395,7 +395,7 @@ function App() {
             <aside className="sp-sidebar">
               <div className="sp-logo">
                 <span className="sp-logo-mark">
-                  <RadioTower />
+                  <img src="/stagepilot-icon.png" alt="" width="40" height="40" />
                 </span>
                 StagePilot
               </div>

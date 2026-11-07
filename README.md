@@ -87,3 +87,7 @@ La sincronizzazione è avviata esplicitamente da **Invia al tablet** sul web o d
 Ispirazioni di prodotto: [MobileSheets](https://www.zubersoft.com/mobilesheets/), [BandHelper Practice](https://www.bandhelper.com/tutorials/practicing.html), [SongbookPro Manager](https://songbook-pro.com/docs/manager/) e [ChordPro](https://www.chordpro.org/chordpro/chordpro-directives/).
 
 Il riconoscimento usa le API pubbliche di [LRCLIB](https://lrclib.net/docs) e [Deezer](https://developers.deezer.com/api/track). Le frasi candidate vengono cercate online; il testo completo recuperato per il confronto rimane in memoria temporanea e non sostituisce quello incollato. Le risposte positive sono memorizzate in una cache limitata in memoria per un’ora.
+
+## Identità grafica
+
+L’icona StagePilot è una S azzurra con Play al centro su grafite, condivisa da Android e studio web. Master, esportazioni e prompt sono descritti in [branding/README.md](branding/README.md).

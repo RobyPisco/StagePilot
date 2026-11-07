@@ -1,6 +1,6 @@
 # StagePilot — punto di ripartenza
 
-Salvato il 7 novembre 2026. Versione Android 0.1.2, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
+Salvato il 7 novembre 2026. Versione Android 0.1.3, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
 
 ## Stato completato
 
@@ -41,3 +41,7 @@ Pulsante azzurro Invia al tablet nella barra superiore web. Richieste autenticat
 ### Nota per il prossimo collaudo
 
 Nel primo invio osservato il nuovo brano era nel repertorio ma mancava la sua ultima voce nella scaletta. La voce è stata recuperata dalla cronologia del PC e il secondo invio ha trasferito correttamente tutte le 6 voci (5 brani e una pausa). Il caso non si riproduce nel merge isolato: aggiunto un test di tre sincronizzazioni consecutive con normalizzazione Android dei campi opzionali. Ricontrollare domani con un nuovo brano aggiunto dal web prima di considerare concluso il collaudo della sincronizzazione. Backup finale completo disponibile tra i file consegnati.
+
+## Identità StagePilot — icona 0.1.3
+
+Creata e integrata l’icona originale S azzurra con Play nello spazio negativo su fondo grafite. Master e prompt in branding/. Launcher Android adattivo, testata dell’app, logo web e favicon aggiornati; asset locali e PNG esportabile. Compilazioni Android e web riuscite; versione 0.1.3 installata sul Fire HD 8 e icona verificata nella testata dell’app. Asset web e favicon serviti con risposta HTTP 200. Nessuna modifica ai dati musicali o alla sincronizzazione in questo aggiornamento.

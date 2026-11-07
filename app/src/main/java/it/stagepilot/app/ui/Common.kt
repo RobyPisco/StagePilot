@@ -3,6 +3,7 @@ package it.stagepilot.app.ui
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import it.stagepilot.app.R
 
 /** Campo di testo nello stile Palco: bordo scuro, ambra quando è attivo. */
 @Composable
@@ -83,6 +86,8 @@ fun BrandBar(bandName: String, onClick: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 10.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Image(painterResource(R.drawable.stagepilot_launcher), contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+        Spacer(Modifier.width(9.dp))
         Text("StagePilot", color = Palco.Amber, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Spacer(Modifier.weight(1f))
         Row(
