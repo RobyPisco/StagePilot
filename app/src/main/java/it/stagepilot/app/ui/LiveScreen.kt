@@ -80,6 +80,9 @@ import it.stagepilot.app.data.entries
 import it.stagepilot.app.data.SetItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /* La vista live: schermo pieno, testo scalabile, sei comandi grandi sempre a
    portata. Lo schermo non si spegne finché è aperta. */
@@ -103,6 +106,8 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     val entry = entries[index.coerceIn(0, entries.lastIndex)]
+    var leadRemaining by remember(index) { mutableIntStateOf(0) }
+    var skipLead by remember(index) { mutableStateOf(false) }
     val next = entries.getOrNull(index + 1)
     var trackElapsed by remember(index) { mutableIntStateOf(0) }
     LaunchedEffect(index) { while (true) { delay(1000); trackElapsed++ } }
@@ -123,6 +128,15 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
         val n = index + delta
         if (n in entries.indices) { playing = false; index = n }
     }
+    fun togglePlay() {
+        if (entry !is Entry.Track) return
+        if (playing) { playing = false; return }
+        if (scroll.maxValue <= 0) return
+        scope.launch {
+            if (scroll.value >= scroll.maxValue) { scroll.scrollTo(0); skipLead = false }
+            playing = true
+        }
+    }
     LaunchedEffect(index) { scroll.scrollTo(0) }
 
     // battito: lampeggio (striscia e cerchio) e, se lo accendi toccando il cerchio, il tic del metronomo
@@ -141,10 +155,17 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
         speedBasis(liveSong?.body, liveSong?.bpm, secs(liveSong?.dur))
     }
     val basisNow by androidx.compose.runtime.rememberUpdatedState(basis)
-    LaunchedEffect(playing, index) {
+    LaunchedEffect(playing, index, skipLead) {
+        leadRemaining = 0
         val first = currentEntry as? Entry.Track ?: return@LaunchedEffect
         if (!playing) return@LaunchedEffect
-        delay(first.song.lead * 1000L)
+        if (!skipLead && scroll.value == 0) {
+            for (left in first.song.lead downTo 1) {
+                leadRemaining = left
+                delay(1000)
+            }
+        }
+        leadRemaining = 0
         var last = androidx.compose.runtime.withFrameNanos { it }
         var carry = 0f
         while (playing) {
@@ -152,10 +173,19 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             val dt = (now - last) / 1_000_000_000f
             last = now
             val song = (currentEntry as? Entry.Track)?.song ?: break
-            if (scroll.maxValue > 0 && scroll.value >= scroll.maxValue) { playing = false; break }
+            if (scroll.maxValue <= 0 || scroll.value >= scroll.maxValue) { playing = false; break }
+            if (scroll.isScrollInProgress) { carry = 0f; continue }
             carry += speedFor(scroll.maxValue.toFloat(), basisNow, song.scroll, song.lead) * dt
             val px = carry.toInt()
-            if (px > 0) { scroll.scrollBy(px.toFloat()); carry -= px }
+            if (px > 0) {
+                try { scroll.scrollBy(px.toFloat()); carry -= px }
+                catch (e: CancellationException) {
+                    // A touch gesture may cancel this single scroll mutation.
+                    // Preserve effect cancellation, but resume after a manual drag.
+                    currentCoroutineContext().ensureActive()
+                    carry = 0f
+                }
+            }
         }
     }
 
@@ -170,7 +200,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 if (ev.type != KeyEventType.KeyDown) false else when (ev.key) {
                     Key.DirectionRight, Key.PageDown -> { go(1); true }
                     Key.DirectionLeft, Key.PageUp -> { go(-1); true }
-                    Key.Spacebar -> { playing = !playing; true }
+                    Key.Spacebar -> { togglePlay(); true }
                     Key.Escape -> { onClose(); true }
                     else -> false
                 }
@@ -354,15 +384,33 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             }
         }
 
+        if (entry is Entry.Track) Row(
+            Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 18.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                when {
+                    leadRemaining > 0 -> "Scorrimento tra ${leadRemaining}s"
+                    scroll.maxValue <= 0 -> "Il brano è tutto visibile. Aumenta il testo in Opzioni per scorrerlo."
+                    playing -> "Scorrimento attivo"
+                    scroll.value >= scroll.maxValue -> "Fine del brano · Play riparte dall’inizio"
+                    else -> "Play avvia lo scorrimento" + if (!skipLead && scroll.value == 0 && entry.song.lead > 0) " dopo ${entry.song.lead}s di attesa" else ""
+                },
+                color = if (playing) Palco.Amber else Palco.Dim, fontFamily = Sans, fontSize = 12.sp,
+                modifier = Modifier.weight(1f),
+            )
+            if (leadRemaining > 0) GhostButton("Parti subito") { skipLead = true }
+        }
+
         // i sei comandi
         if (opt.bar) Row(
             Modifier.fillMaxWidth().background(Palco.Raise),
         ) {
             Control(Ic.Prev, "Prec") { go(-1) }
             Control(if (playing) Ic.Pause else Ic.Play, if (playing) "Pausa" else "Play", primary = true, active = playing) {
-                if (entry is Entry.Track) playing = !playing
+                togglePlay()
             }
-            Control(Ic.Stop, "Stop") { playing = false; scope.launch { scroll.animateScrollTo(0) } }
+            Control(Ic.Stop, "Stop") { playing = false; skipLead = false; scope.launch { scroll.animateScrollTo(0) } }
             Control(Ic.Next, "Succ") { go(1) }
             Control(Ic.Struct, "Strut", active = struct) { struct = !struct }
             Control(Ic.Lock, "Blocca", active = locked, alwaysOn = true) { locked = !locked }

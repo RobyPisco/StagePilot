@@ -14,8 +14,8 @@ android {
         // Android 10: il Fire HD 8 di prova Ã¨ LineageOS 17.1 (SDK 29)
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
         testInstrumentationRunner = "it.stagepilot.app.SmokeInstrumentation"
     }
 

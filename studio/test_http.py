@@ -47,6 +47,17 @@ class HttpTests(unittest.TestCase):
             with patch.object(self.server.RequestHandlerClass,'local',return_value=False):
                 self.assertEqual(403,self.call('/api/metadata',{'body':'Private draft'})[0])
             self.assertEqual(1,self.call('/api/state')[1]['revision'])
+    def test_web_to_tablet_delivery_requires_auth_and_confirmation(self):
+        self.call('/api/transfer/poll',{'device':'test-tablet','ready':True})
+        request=self.call('/api/transfer/request',{})[1]
+        with patch.object(self.server.RequestHandlerClass,'local',return_value=False):
+            self.assertEqual(403,self.call('/api/transfer/poll',{'device':'test-tablet','ready':True})[0])
+        poll=self.call('/api/transfer/poll',{'device':'test-tablet','ready':True})[1]
+        self.assertEqual(request['sequence'],poll['sequence'])
+        self.assertNotEqual('done',self.call('/api/transfer')[1]['status'])
+        self.call('/api/transfer/finish',{'device':'test-tablet','sequence':poll['sequence'],'state':'done'})
+        self.assertEqual('done',self.call('/api/transfer')[1]['status'])
+        self.assertEqual(1,self.call('/api/state')[1]['revision'])
     def test_conflict_confirmation_must_match_reviewed_revision(self):
         base=copy.deepcopy(EMPTY)
         base['bands'][0]['songs']=[{'id':'s1','title':'Base','body':'[Am]x'}]

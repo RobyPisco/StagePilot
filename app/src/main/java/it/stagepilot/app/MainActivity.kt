@@ -183,6 +183,14 @@ private fun App(
     var pendingEdits by remember { mutableStateOf<EditBatch?>(null) }
 
     var syncConflict by remember { mutableStateOf<it.stagepilot.app.data.SyncConflict?>(null) }
+    val deviceId = remember { prefs.getString("deviceId", null) ?: java.util.UUID.randomUUID().toString().also { prefs.edit().putString("deviceId", it).apply() } }
+    var remoteTransfer by remember { mutableIntStateOf(0) }
+    suspend fun finishRemote(state: String) {
+        if (remoteTransfer <= 0) return
+        val sequence = remoteTransfer
+        runCatching { PcClient.finishTransfer(pcAddr, pcCode, deviceId, sequence, state) }
+        if (state != "conflict") remoteTransfer = 0
+    }
     fun fetchPc(silent: Boolean, policy: String? = null, revision: Int? = null) {
         if (pcBusy) return
         if (pcAddr.isBlank() || pcCode.isBlank()) {
@@ -201,12 +209,33 @@ private fun App(
                 store.acceptSync(merged, sent)
                 pcStatus = "PC e tablet sono aggiornati."
                 syncConflict = null
+                finishRemote("done")
             } catch (e: it.stagepilot.app.data.SyncConflict) {
                 syncConflict = e
                 pcStatus = "Scegli come risolvere le modifiche in conflitto."
+                finishRemote("conflict")
             } catch (e: Exception) {
                 pcStatus = e.message ?: "Sincronizzazione non riuscita. I dati locali sono disponibili."
+                finishRemote("error")
             } finally { pcBusy = false }
+        }
+    }
+
+    // A web button explicitly requests a transfer. During a performance or edit
+    // the tablet only reports its presence; it never replaces the live library.
+    LaunchedEffect(pcAddr, pcCode) {
+        if (pcAddr.isBlank() || pcCode.isBlank()) return@LaunchedEffect
+        while (true) {
+            try {
+                val available = route == "main" && tab != 5 && !(tab == 2 && editingSet) && !pcBusy && syncConflict == null
+                val sequence = PcClient.pollTransfer(pcAddr, pcCode, deviceId, available)
+                if (sequence > 0 && route == "main" && tab != 5 && !(tab == 2 && editingSet) && !pcBusy && syncConflict == null) {
+                    remoteTransfer = sequence
+                    fetchPc(false)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (_: Exception) { /* Offline stage use remains independent. */ }
+            kotlinx.coroutines.delay(3000)
         }
     }
 
@@ -222,7 +251,7 @@ private fun App(
         PalcoDialog("Modifiche da confrontare", "Tieni quelle del tablet", {
             syncConflict = null
             fetchPc(false, "device", conflict.revision)
-        }, { syncConflict = null; pcStatus = "Sincronizzazione annullata. Nessun dato è stato sostituito." }) {
+        }, { syncConflict = null; pcStatus = "Sincronizzazione annullata. Nessun dato è stato sostituito."; scope.launch { finishRemote("cancelled") } }) {
             Column {
                 Text("Alcune informazioni sono cambiate da entrambe le parti. La scelta riguarda solo queste; tutte le altre modifiche vengono unite.", color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp)
                 conflict.paths.take(6).forEach { path ->
@@ -366,7 +395,8 @@ private fun App(
             when (tab) {
             0 -> HomeScreen(db, onStage = { setId -> store.updateBand { it.copy(cur = setId) }; liveAt = 0; route = "live" },
                 onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
-                onConcerts = { tab = 4 }, onPractice = { practiceSetScope = ""; tab = 3 }, onSettings = { tab = 5 })
+                onConcerts = { tab = 4 }, onPractice = { practiceSetScope = ""; tab = 3 }, onSettings = { tab = 5 },
+                pcConfigured = pcAddr.isNotBlank() && pcCode.isNotBlank(), pcBusy = pcBusy, pcStatus = pcStatus, onSync = { fetchPc(false) })
             2 -> SetlistScreen(
             db = db,
             editing = editingSet,

@@ -1,6 +1,6 @@
 # StagePilot — punto di ripartenza
 
-Salvato il 7 novembre 2026. Versione Android 0.1.1, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
+Salvato il 7 novembre 2026. Versione Android 0.1.2, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
 
 ## Stato completato
 
@@ -13,7 +13,7 @@ Salvato il 7 novembre 2026. Versione Android 0.1.1, installata sul Fire HD 8; st
 
 ## Verifica dell’ultimo aggiornamento
 
-65 test Android, 23 server e 9 web passati. Verificati riconoscimento online, campi compilati nel browser e sul tablet, conservazione delle correzioni, recupero della bozza e avvio del pacchetto Windows estratto.
+65 test Android, 32 server e 9 web passati. Verificati riconoscimento online, campi compilati nel browser e sul tablet, conservazione delle correzioni, recupero della bozza e avvio del pacchetto Windows estratto.
 
 ## Da riprendere insieme
 
@@ -29,3 +29,15 @@ Aprire StagePilot.cmd nella cartella del progetto e poi Importa nello studio web
 
 Repository privato: https://github.com/RobyPisco/StagePilot
 Il codice dell’importatore è nel commit 569e0cd. Dati runtime e codice di collegamento sono esclusi da Git. Il backup JSON della libreria PC è salvato separatamente tra i file consegnati, senza il codice di collegamento.
+
+## Correzione sincronizzazione e Play
+
+Aggiunto il pulsante Sincronizza con il PC in Oggi. Play mostra il conto alla rovescia dell’attesa iniziale (Ultimo Giro: 8 secondi) con Parti subito; segnala quando il chart è interamente visibile. Lo scorrimento riprende dopo un trascinamento manuale e Play a fine chart riparte dall’inizio.
+
+## Invio dal web e verifica finale
+
+Pulsante azzurro Invia al tablet nella barra superiore web. Richieste autenticate e temporanee, conferma ricevuta dal tablet, attesa durante palco/modifica, gestione conflitti. La libreria continua a usare il normale merge SQLite. Provato dal pulsante reale del browser sul Fire HD 8 via Wi-Fi: quinto brano e scaletta completa presenti. Verificati conto alla rovescia e Parti subito su Ultimo Giro, con movimento del testo misurato sul dispositivo. Versione Android installata: 0.1.2.
+
+### Nota per il prossimo collaudo
+
+Nel primo invio osservato il nuovo brano era nel repertorio ma mancava la sua ultima voce nella scaletta. La voce è stata recuperata dalla cronologia del PC e il secondo invio ha trasferito correttamente tutte le 6 voci (5 brani e una pausa). Il caso non si riproduce nel merge isolato: aggiunto un test di tre sincronizzazioni consecutive con normalizzazione Android dei campi opzionali. Ricontrollare domani con un nuovo brano aggiunto dal web prima di considerare concluso il collaudo della sincronizzazione. Backup finale completo disponibile tra i file consegnati.

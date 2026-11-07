@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from library import Library
 from metadata import MetadataLookup
+from transfers import TransferHub
 
 ROOT = Path(__file__).resolve().parents[1]
 EMPTY = {'v': 4, 'curBand': 'b1', 'opt': {}, 'bands': [{'id': 'b1', 'name': 'COPYCUT', 'me': 'Tutti', 'cur': 'set1', 'songs': [], 'sets': [{'id': 'set1', 'name': 'La mia prima scaletta', 'items': []}], 'events': [], 'rehearsals': []}]}
@@ -28,6 +29,7 @@ def make_server(port=8765, data_dir=None):
     directory = Path(data_dir or ROOT/'studio/data')
     library = Library(directory/'stagepilot.sqlite', EMPTY)
     metadata = MetadataLookup()
+    transfers = TransferHub()
     with library.connection() as c:
         row=c.execute("SELECT value FROM config WHERE key='pair_code'").fetchone()
         code=row[0] if row else ''.join(secrets.choice('0123456789') for _ in range(6))
@@ -58,6 +60,7 @@ def make_server(port=8765, data_dir=None):
             if path.startswith('/api/'):
                 if not self.authorized(): return self.reply({'error':'Inserisci il codice mostrato sul PC.'},403)
                 if path=='/api/state': return self.reply(library.get())
+                if path=='/api/transfer': return self.reply(transfers.status())
                 if path=='/api/backup': return self.reply(library.get()['db'])
                 return self.reply({'error':'Funzione non trovata.'},404)
             public=ROOT/'web/dist'
@@ -79,6 +82,9 @@ def make_server(port=8765, data_dir=None):
                 if not isinstance(data,dict): raise ValueError('Richiesta non valida.')
                 path=urlsplit(self.path).path
                 if path=='/api/metadata': return self.reply(metadata.identify(data))
+                if path=='/api/transfer/request': return self.reply(transfers.request(library.get()['revision']))
+                if path=='/api/transfer/poll': return self.reply(transfers.poll(data))
+                if path=='/api/transfer/finish': return self.reply(transfers.finish(data))
                 if path=='/api/state': return self.reply(library.save(data['db'],data['revision']))
                 if path=='/api/undo': return self.reply(library.undo(data['revision']))
                 if path=='/api/sync':

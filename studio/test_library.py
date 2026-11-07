@@ -12,6 +12,19 @@ def sample():
     return db
 
 class LibraryTests(unittest.TestCase):
+    def test_web_song_and_set_append_survive_repeated_android_round_trips(self):
+        base=sample(); device=copy.deepcopy(base); pc=copy.deepcopy(base)
+        for item in base['bands'][0]['sets'][0]['items']:
+            item.update(label=None,dur=None)
+        device=copy.deepcopy(base); pc=copy.deepcopy(base)
+        pc['bands'][0]['songs'].append({'id':'s_new-uuid','title':'Nuovo dal web','body':'[C]prova','bpm':129})
+        pc['bands'][0]['sets'][0]['items'].append({'type':'song','id':'s_new-uuid'})
+        for _ in range(3):
+            merged,pc,conflicts=merge_libraries(base,device,pc)
+            self.assertEqual([],conflicts)
+            self.assertEqual(['s1','s_new-uuid'],[i['id'] for i in merged['bands'][0]['sets'][0]['items']])
+            for item in merged['bands'][0]['sets'][0]['items']: item.update(label=None,dur=None)
+            base=copy.deepcopy(merged); device=copy.deepcopy(merged)
     def test_independent_edits_merge_and_personal_transposition_stays(self):
         base=sample(); device=copy.deepcopy(base); pc=copy.deepcopy(base)
         device['bands'][0]['songs'][0]['title']='Dal tablet'

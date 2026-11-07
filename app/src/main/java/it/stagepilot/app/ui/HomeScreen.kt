@@ -24,7 +24,7 @@ import it.stagepilot.app.core.preparation
 import java.time.LocalDate
 
 @Composable
-fun HomeScreen(db: DB, onStage: (String) -> Unit, onImport: () -> Unit, onConcerts: () -> Unit, onPractice: () -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(db: DB, onStage: (String) -> Unit, onImport: () -> Unit, onConcerts: () -> Unit, onPractice: () -> Unit, onSettings: () -> Unit, pcConfigured: Boolean, pcBusy: Boolean, pcStatus: String, onSync: () -> Unit) {
     val band = db.band
     val entries = band.entries()
     val ready = band.songs.count { it.status == "ready" }
@@ -35,6 +35,12 @@ fun HomeScreen(db: DB, onStage: (String) -> Unit, onImport: () -> Unit, onConcer
     Box(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 1000.dp).verticalScroll(rememberScrollState()).padding(bottom = 22.dp)) {
             BrandBar(band.name, onSettings)
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                GhostButton(if (pcBusy) "Sincronizzazione in corso…" else if (pcConfigured) "Sincronizza con il PC" else "Collega lo studio PC", Modifier.fillMaxWidth()) {
+                    if (!pcBusy) { if (pcConfigured) onSync() else onSettings() }
+                }
+                Text(pcStatus.ifBlank { "Dopo le modifiche sul web, tocca qui per aggiornare brani e scalette." }, color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp))
+            }
             LargeTitle("La tua musica.\nIl tuo prossimo palco.", "Tutto pronto, un brano alla volta.")
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Palco.AmberDeep).padding(24.dp)) {

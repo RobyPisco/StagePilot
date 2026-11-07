@@ -9,7 +9,7 @@
 - **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come file o elenco su Android.
 - **Prova guidata:** agenda di passaggi specifici, scelta della sezione del brano, obiettivo, ruolo responsabile, decisioni condivise, stato da risolvere/risolto e filtro personale. Apertura del solo passaggio nel lettore, senza modificare il chart originale. Sessioni cronometrate con riepilogo nel registro.
 - **Concerti:** data, orario, luogo, scaletta e appunti. Controlli sui brani ancora da preparare, sui passaggi aperti e sulle durate mancanti. Accesso alla prova filtrata per la scaletta della serata.
-- **Palco Android:** schermo acceso, trasposizione, notazione inglese/italiana, scorrimento, solo testo/struttura, note per ruolo, capotasto, blocco del chart, prossimo brano e metronomo. Regia del set con salto diretto ai brani, tempo rimanente stimato e richiesta fuori scaletta dal repertorio. Supporto ai tasti di girapagine Bluetooth.
+- **Palco Android:** Play avvia lo scorrimento del testo; l’attesa iniziale del brano mostra un conto alla rovescia e si può saltare con **Parti subito**. Se tutto il brano entra nello schermo viene indicato. Schermo acceso, trasposizione, notazione inglese/italiana, scorrimento, solo testo/struttura, note per ruolo, capotasto, blocco del chart, prossimo brano e metronomo. Regia del set con salto diretto ai brani, tempo rimanente stimato e richiesta fuori scaletta dal repertorio. Supporto ai tasti di girapagine Bluetooth.
 - **Dati:** SQLite sul PC e sul tablet, backup JSON compatibili con Backline, copie locali Android, cronologia del PC con annullamento. La sincronizzazione unisce campi indipendenti, chiede una scelta per i conflitti e rifiuta conferme riferite a revisioni superate. Le preferenze personali di lettura non vengono imposte agli altri dispositivi.
 
 ## Avvio rapido su Windows
@@ -19,7 +19,7 @@ Per compilare dal repository servono **Node.js 24, Python 3, JDK 21 e Android SD
 1. Esegui `Build-StagePilot.cmd`, oppure usa i comandi sotto.
 2. Esegui `StagePilot.cmd` per aprire lo studio web.
 3. Apri **Collega Android** nel browser: mostra l'indirizzo e un codice di sei cifre.
-4. Sul tablet apri StagePilot, tocca il nome della band/ingranaggio → **Studio web**, inserisci indirizzo e codice e premi **Sincronizza**.
+4. Al primo collegamento, sul tablet apri nome della band/ingranaggio → **Studio web** e inserisci indirizzo e codice. Poi premi il pulsante azzurro **Invia al tablet**, ben visibile nella barra superiore dello studio web: il tablet aperto su Oggi riceve la richiesta e il web mostra la conferma. È disponibile anche **Oggi → Sincronizza con il PC** sul tablet.
 
 PC e tablet devono stare sulla stessa Wi-Fi. Il codice è creato sul PC al primo avvio e non è incluso nel repository. Lo studio web è locale: non servono account o abbonamenti. Sul palco Android legge la propria libreria senza dipendere dal PC.
 
@@ -80,7 +80,7 @@ adb shell am instrument -r -w it.stagepilot.app.test/it.stagepilot.app.SmokeInst
 
 ## Confini di questo MVP
 
-La sincronizzazione è avviata dal pulsante sul tablet, non è collaborazione in tempo reale. Le stime live dipendono dalle durate inserite. Non sono ancora inclusi PDF, registrazioni audio, multitraccia, MIDI, controllo simultaneo di più tablet, account/cloud e ricerca/importazione diretta da URL Ultimate Guitar. Il click audio e i pedali reali richiedono una prova musicale dedicata; i relativi controlli già esistono.
+La sincronizzazione è avviata esplicitamente da **Invia al tablet** sul web o da **Sincronizza con il PC** sul tablet; non è collaborazione in tempo reale. Per ricevere le richieste web il tablet deve avere StagePilot aperto e configurato, sulla stessa Wi-Fi del PC. Durante il palco o una modifica la richiesta aspetta il ritorno a Oggi; eventuali conflitti richiedono una scelta sul tablet. Le stime live dipendono dalle durate inserite. Non sono ancora inclusi PDF, registrazioni audio, multitraccia, MIDI, controllo simultaneo di più tablet, account/cloud e ricerca/importazione diretta da URL Ultimate Guitar. Il click audio e i pedali reali richiedono una prova musicale dedicata; i relativi controlli già esistono.
 
 `preview/` conserva la proposta grafica approvata. L'app funzionante è in `app/` e `web/`; `tools/pagina-pc/` resta come riferimento dello strumento precedente. La conversione browser condivisa deriva da Backline ed è distribuita con il suo codice nel progetto.
 

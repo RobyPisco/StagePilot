@@ -65,6 +65,12 @@ const NAV = [
 ] as const;
 type Mutation = (db: DB, band: Band) => void;
 type Info = { address: string; code?: string; requiresCode: boolean };
+type Transfer = {
+  sequence: number;
+  status: string;
+  message: string;
+  online: number;
+};
 async function api<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch("/api/" + path, {
     method: body ? "POST" : "GET",
@@ -167,6 +173,34 @@ function App() {
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
   const [practiceScope, setPracticeScope] = useState("");
+  const [transfer, setTransfer] = useState<Transfer | null>(null);
+  const [sending, setSending] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () =>
+      api<Transfer>("transfer")
+        .then((t) => {
+          if (mounted) setTransfer(t);
+        })
+        .catch(() => {});
+    void refresh();
+    const timer = setInterval(refresh, 2500);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, []);
+  async function sendToTablet() {
+    if (busy || sending) return;
+    setSending(true);
+    try {
+      setTransfer(await api<Transfer>("transfer/request", {}));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Trasferimento non riuscito.");
+    } finally {
+      setSending(false);
+    }
+  }
   const [focus, setFocus] = useState<{ song: string; section: string } | null>(
     null,
   );
@@ -400,6 +434,14 @@ function App() {
                 <span className="sp-kicker">STUDIO / {band.name}</span>
                 <div className="sp-row">
                   <button
+                    className="sp-primary sp-send-tablet"
+                    disabled={busy || sending}
+                    onClick={sendToTablet}
+                  >
+                    <TabletSmartphone />
+                    {sending ? "Invio…" : "Invia al tablet"}
+                  </button>
+                  <button
                     className="sp-iconbtn"
                     onClick={undo}
                     aria-label="Annulla ultima modifica"
@@ -420,6 +462,29 @@ function App() {
                 </div>
               </header>
               <main className="sp-main">
+                <div
+                  className={"sp-transfer " + (transfer?.status || "idle")}
+                  aria-live="polite"
+                >
+                  <TabletSmartphone />
+                  <div>
+                    <strong>
+                      {transfer?.status === "done"
+                        ? "Tablet aggiornato"
+                        : "Dal PC al tuo tablet"}
+                    </strong>
+                    <p>
+                      {transfer?.message ||
+                        "Apri StagePilot sul tablet per ricevere brani e scalette."}
+                    </p>
+                  </div>
+                  <button
+                    className="sp-link"
+                    onClick={() => setModal("connect")}
+                  >
+                    Come collegarlo
+                  </button>
+                </div>
                 {error && (
                   <div className="sp-error" role="alert">
                     {error}
@@ -558,8 +623,10 @@ function App() {
         {modal === "connect" && (
           <Modal title="Collega il tuo Android" onClose={() => setModal(null)}>
             <p className="sp-sub">
-              PC e tablet sulla stessa Wi-Fi. In StagePilot apri Impostazioni →
-              Studio web e inserisci questi dati.
+              Le modifiche sono salvate sul PC. Per portare brani e scalette sul
+              tablet, lascia aperto questo studio e usa la stessa Wi-Fi. Sul
+              tablet apri Oggi → Sincronizza con il PC. Al primo collegamento,
+              apri Impostazioni → Studio web e inserisci questi dati.
             </p>
             <label className="sp-form-label">
               Indirizzo del PC
