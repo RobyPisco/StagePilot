@@ -55,6 +55,7 @@ import { Chart } from "./Chart";
 import "./style.css";
 import { Agenda, Concerts } from "./Agenda";
 import { Importer } from "./Importer";
+import { SongEditor } from "./SongEditor";
 
 const NAV = [
   ["home", "Oggi", House],
@@ -591,10 +592,14 @@ function App() {
         )}
         {edit && (
           <SongEditor
+            key={band.id + edit.id}
+            bandId={band.id}
+            saveError={error}
+            latest={band.songs.find(s => s.id === edit.id)}
             initial={edit}
             busy={busy}
             close={() => setEdit(null)}
-            save={async (s) => {
+            save={async (s, baseline) => {
               if (
                 await commit((_, b) => {
                   const at = b.songs.findIndex((x) => x.id === s.id);
@@ -604,11 +609,13 @@ function App() {
                         "Questo brano è stato eliminato da un altro dispositivo. La bozza resta aperta.",
                       );
                     b.songs.push(s);
-                  } else b.songs[at] = mergeSongDraft(edit, s, b.songs[at]);
+                  } else b.songs[at] = mergeSongDraft(baseline, s, b.songs[at]);
                 })
               ) {
                 setEdit(null);
+                return true;
               }
+              return false;
             }}
             remove={async () => {
               if (
@@ -616,8 +623,11 @@ function App() {
                   (_, b) => removeSong(b, edit.id),
                   "Brano eliminato. Puoi recuperarlo con Annulla.",
                 )
-              )
+              ) {
                 setEdit(null);
+                return true;
+              }
+              return false;
             }}
           />
         )}
@@ -955,168 +965,6 @@ function Repertoire({
         </Button>
       </div>
     </>
-  );
-}
-function SongEditor({
-  initial,
-  save,
-  remove,
-  close,
-  busy,
-}: {
-  initial: Song;
-  save: (s: Song) => void;
-  remove: () => void;
-  close: () => void;
-  busy: boolean;
-}) {
-  const [song, setSong] = useState<Song>({ ...songDefaults(), ...initial }),
-    [confirmDelete, setConfirmDelete] = useState(false);
-  const field = <K extends keyof Song>(k: K, v: Song[K]) =>
-    setSong((s) => ({ ...s, [k]: v }));
-  const valid =
-    song.title.trim() &&
-    (!song.dur || seconds(song.dur) > 0) &&
-    (!song.bpm || (song.bpm >= 20 && song.bpm <= 400));
-  return (
-    <Modal
-      title={initial.title ? "Modifica brano" : "Nuovo brano"}
-      onClose={close}
-    >
-      <label className="sp-form-label">
-        Titolo
-        <input
-          className="sp-input"
-          value={song.title}
-          onChange={(e) => field("title", e.target.value)}
-        />
-      </label>
-      <label className="sp-form-label">
-        Artista
-        <input
-          className="sp-input"
-          value={song.artist}
-          onChange={(e) => field("artist", e.target.value)}
-        />
-      </label>
-      <div className="sp-form-grid">
-        <label className="sp-form-label">
-          Tonalità
-          <input
-            className="sp-input"
-            value={song.key}
-            placeholder="Am, F#m…"
-            onChange={(e) => field("key", e.target.value)}
-          />
-        </label>
-        <label className="sp-form-label">
-          BPM
-          <input
-            className="sp-input"
-            type="number"
-            min={20}
-            max={400}
-            value={song.bpm ?? ""}
-            onChange={(e) =>
-              field("bpm", e.target.value ? Number(e.target.value) : null)
-            }
-          />
-        </label>
-      </div>
-      <div className="sp-form-grid">
-        <label className="sp-form-label">
-          Durata
-          <input
-            className="sp-input"
-            value={song.dur}
-            placeholder="3:40"
-            onChange={(e) => field("dur", e.target.value)}
-          />
-        </label>
-        <label className="sp-form-label">
-          Preparazione
-          <select
-            className="sp-input"
-            value={song.status}
-            onChange={(e) => field("status", e.target.value as Song["status"])}
-          >
-            {Object.entries(labels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className="sp-form-label">
-        Tag, separati da virgola
-        <input
-          className="sp-input"
-          value={song.tags.join(", ")}
-          onChange={(e) =>
-            field(
-              "tags",
-              e.target.value.split(",").map((t) => t.trim()),
-            )
-          }
-        />
-      </label>
-      <label className="sp-form-label">
-        Appunto per la prossima prova
-        <textarea
-          className="sp-input"
-          value={song.practice}
-          onChange={(e) => field("practice", e.target.value)}
-        />
-      </label>
-      <label className="sp-form-label">
-        Nota per tutta la band
-        <textarea
-          className="sp-input"
-          value={song.notes.Tutti || ""}
-          onChange={(e) =>
-            field("notes", { ...song.notes, Tutti: e.target.value })
-          }
-        />
-      </label>
-      <label className="sp-form-label">
-        Testo e accordi ChordPro
-        <textarea
-          className="sp-input"
-          spellCheck={false}
-          value={song.body}
-          onChange={(e) => field("body", e.target.value)}
-        />
-      </label>
-      <div className="sp-end-actions">
-        <Button onClick={close}>Annulla</Button>
-        <Button
-          primary
-          disabled={!valid || busy}
-          onClick={() =>
-            save({
-              ...song,
-              title: song.title.trim(),
-              tags: song.tags.filter(Boolean),
-            })
-          }
-        >
-          <Save />
-          Salva
-        </Button>
-      </div>
-      {initial.title && (
-        <button
-          className="sp-link sp-danger"
-          onClick={() => (confirmDelete ? remove() : setConfirmDelete(true))}
-        >
-          <Trash2 />
-          {confirmDelete
-            ? "Conferma eliminazione (recuperabile con Annulla)"
-            : "Elimina brano"}
-        </button>
-      )}
-    </Modal>
   );
 }
 

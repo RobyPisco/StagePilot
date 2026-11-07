@@ -2,13 +2,14 @@
 
 <img src="web/public/stagepilot-icon.png" alt="StagePilot" width="96">
 
-[![Licenza MIT](https://img.shields.io/badge/licenza-MIT-7fb7ff)](LICENSE) [![Windows x64](https://img.shields.io/badge/Windows-10%2F11%20x64-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.0-beta.1) [![Android](https://img.shields.io/badge/Android-10%2B-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.0-beta.1)
+[![Licenza MIT](https://img.shields.io/badge/licenza-MIT-7fb7ff)](LICENSE) [![Windows x64](https://img.shields.io/badge/Windows-10%2F11%20x64-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1) [![Android](https://img.shields.io/badge/Android-10%2B-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1)
 
 **Prepara sul PC, prova con un obiettivo, suona dal tablet.** Android nativo e studio web locale, con librerie SQLite autonome e sincronizzazione esplicita. Tema grafite e azzurro, app separata da Backline (`it.stagepilot.app`).
 
-## Funzioni della versione 0.2.0
+## Funzioni della versione 0.2.1
 
 - **Importazione automatica:** incolla testo e accordi da Ultimate Guitar, oppure apri un file ChordPro/testo. La pulizia legge i metadati già presenti; il riconoscimento confronta le frasi con LRCLIB e propone titolo/artista, durata e BPM della registrazione Deezer. Mostra album, fonti e alternative, senza modificare le parole, gli accordi o le correzioni manuali. Se il catalogo non ha il BPM, lo dichiara e lascia il campo modificabile. Il web conserva la bozza nella scheda del browser anche dopo un ricaricamento. Su Android il riconoscimento online usa lo studio PC collegato nelle impostazioni; importazione e lettura restano disponibili offline.
+- **Editor brano sul PC:** testo e anteprima affiancati, accordi agganciati alle sillabe, inserimento e spostamento con un clic, sezioni riordinabili, modalità ChordPro e trasposizione dell’arrangiamento. Annulla/ripristina, recupero della bozza nella scheda e protezione dalle modifiche concorrenti.
 - **Repertorio:** creazione, modifica, ricerca, tag, BPM, tonalità, durata, note condivise e per ruolo, stato di preparazione e appunto di prova.
 - **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come file o elenco su Android.
 - **Prova guidata:** agenda di passaggi specifici, scelta della sezione del brano, obiettivo, ruolo responsabile, decisioni condivise, stato da risolvere/risolto e filtro personale. Apertura del solo passaggio nel lettore, senza modificare il chart originale. Sessioni cronometrate con riepilogo nel registro.
@@ -21,13 +22,13 @@
 
 ## Scarica e inizia
 
-**[Scarica la prima versione gratuita per Windows](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.0-beta.1)** · [Tutte le versioni di prova](https://github.com/RobyPisco/StagePilot/releases) · [Guida in italiano](docs/GUIDA.md)
+**[Scarica la prima versione gratuita per Windows](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1)** · [Tutte le versioni di prova](https://github.com/RobyPisco/StagePilot/releases) · [Guida in italiano](docs/GUIDA.md)
 
 Questa prima distribuzione è una **beta**. Nella pagina Releases trovi:
 
-- **StagePilot-Studio-0.2.0-Windows-x64.exe**: studio web completo, con Python incluso. Windows 10/11 a 64 bit, nessuna installazione richiesta. Avvialo: si apre nel browser. Lascia aperta la sua finestra mentre lavori; chiudila per terminare.
+- **StagePilot-Studio-0.2.1-Windows-x64.exe**: studio web completo, con Python incluso. Windows 10/11 a 64 bit, nessuna installazione richiesta. Avvialo: si apre nel browser. Lascia aperta la sua finestra mentre lavori; chiudila per terminare.
 - **StagePilot-0.2.0-debug.apk**: app Android di prova, Android 10 o successivo. Installazione manuale e aggiornamenti con la stessa firma; esporta un backup prima di aggiornare.
-- **StagePilot-0.2.0-Windows-x64.zip**: EXE, guida offline e avvisi delle dipendenze in un unico archivio.
+- **StagePilot-0.2.1-Windows-x64.zip**: EXE, guida offline e avvisi delle dipendenze in un unico archivio.
 
 L’EXE attuale non ha una firma digitale del produttore: Windows potrebbe segnalarlo come applicazione non riconosciuta. Scarica i file solo dalle Releases di questo repository. L’APK è ancora una build debug: non è una pubblicazione sul Play Store.
 
@@ -42,6 +43,11 @@ Il primo avvio dell’EXE crea una libreria vuota in `%LOCALAPPDATA%\StagePilot\
 Band Live usa invece **Oggi → Band Live**: il capofila apre una sessione e gli altri tablet entrano con indirizzo e codice. Per questa modalità il PC non serve.
 
 ## Screenshot reali
+
+### Editor di testo e accordi
+
+![Editor brano: accordi sulle sillabe e anteprima dal vivo](docs/screenshots/studio-editor.png)
+
 
 ### Studio web: dossier del concerto
 
@@ -146,3 +152,7 @@ La consegna attuale è una versione di prova con APK debug. Prima di una distrib
 ## Licenza e contributi
 
 StagePilot è gratuito e open source con [licenza MIT](LICENSE). Autore: Roberto Pisco. Deriva dal precedente Backline dello stesso autore; le dipendenze mantengono le proprie licenze, indicate in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Per segnalare un problema, apri una [issue](https://github.com/RobyPisco/StagePilot/issues) indicando versione, dispositivo e passaggi per riprodurlo, senza allegare codici di collegamento o backup personali.
+
+## Aggiornamento studio 0.2.1
+
+Editor brano verificato nel browser su inserimento/spostamento accordi, modifica del testo e andata a capo, riordino di intere sezioni, trasposizione con basso degli slash chord, annulla/ripristina, recupero bozza e conservazione di una modifica concorrente indipendente. 17 test web passati. Il formato salvato resta compatibile con Android 0.2.0, che non richiede un aggiornamento per leggere i brani modificati.

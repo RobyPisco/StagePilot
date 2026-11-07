@@ -70,3 +70,14 @@ Repository pubblico su richiesta dell’autore, descrizione aggiornata e tre scr
 Build riproducibile: tools/build_windows.py e tools/requirements-windows.txt. Collaudo tools/smoke_windows.py passato: avvio senza Python sul PATH, asset e guida inclusi, salvataggio SQLite nella cartella utente e riapertura dopo arresto dell’EXE. 37 test server ripassati dopo l’adattamento dei percorsi al bundle. Guide web/Android aggiornate; APK ricompilato.
 
 Release GitHub v0.2.0-beta.1: EXE autonomo, ZIP Windows con guida/licenze, APK debug, guida HTML e SHA256SUMS.txt. EXE non firmato digitalmente; APK di prova, non pubblicato sul Play Store. Restano i limiti del collaudo Band Live con un secondo tablet fisico e della prova musicale completa.
+
+
+## Editor brano — studio Windows/web 0.2.1
+
+Implementato editor con testo e anteprima affiancati. Accordi agganciati a posizioni nel testo, modifica parole conservando gli agganci, inserimento/sostituzione/rimozione e spostamento di accordi. Sezioni rinominabili e riordinabili come passaggi interi, modalità sorgente ChordPro, trasposizione permanente di accordi e tonalità separata da tr personale. Annulla/ripristina fino a 200 modifiche, scorciatoie, bozza sessionStorage recuperabile, uscita protetta e gestione delle revisioni concorrenti con baseline conservata anche dopo recupero.
+
+17 test web passati; build TypeScript/Vite riuscita. Collaudo browser con dati isolati: accordo Dm7 inserito e spostato di una sillaba, trasposizione +2, undo/redo, chiusura e recupero bozza dopo reload, movimento di intera sezione, andata a capo e salvataggio SQLite. Simulata modifica concorrente all’artista: primo salvataggio fermato dalla revisione, secondo tentativo ha conservato sia artista aggiornato sia testo modificato. Nessun dato della libreria personale alterato dal collaudo. Screenshot reale docs/screenshots/studio-editor.png.
+
+Nuovo EXE e ZIP 0.2.1, guida aggiornata con istruzioni per l’editor. Android resta 0.2.0: stesso formato del chart, nessuna migrazione dati. Chi usa lo studio da sorgente deve ricaricare il browser; chi usa l’EXE deve chiudere quello precedente e aprire il nuovo. I dati dell’EXE rimangono in %LOCALAPPDATA%\StagePilot\Studio.
+
+Collaudato anche il conflitto sullo stesso testo: confronto bozza/versione salvata apparso dopo la revisione concorrente; scelta esplicita Mantieni la mia versione e nuovo salvataggio riusciti. Il riferimento di confronto aggiornato viene conservato anche nella bozza recuperabile.

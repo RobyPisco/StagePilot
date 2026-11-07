@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import os
+import re
 import socket
 import subprocess
 import tempfile
@@ -45,8 +46,13 @@ def main():
             for asset in ['/', '/guida.html', '/stagepilot.ico']:
                 with urllib.request.urlopen(base + asset) as response:
                     assert response.status == 200
+                    if asset == '/':
+                        index = response.read().decode('utf-8')
+                        bundle = re.search(r'src="(/assets/[^" ]+\.js)"', index).group(1)
                     if asset == '/guida.html':
                         assert 'Windows-x64.exe' in response.read().decode('utf-8')
+            with urllib.request.urlopen(base + bundle) as response:
+                assert b'EDITOR BRANO' in response.read(), 'Packaged web bundle lacks the song editor'
             state['db']['bands'][0]['name'] = 'EXE persistence test'
             request = urllib.request.Request(base + '/api/state', data=json.dumps(state).encode(),
                                              headers={'Content-Type': 'application/json'})

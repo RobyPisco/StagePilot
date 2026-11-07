@@ -1,6 +1,6 @@
 # StagePilot — guida pratica
 
-Versione 0.2.0 · Testi, accordi, prove e concerti. Android e studio web locale.
+Studio 0.2.1 · Android 0.2.0 · Testi, accordi, prove e concerti. Android e studio web locale.
 
 ## Da dove comincio?
 
@@ -25,7 +25,7 @@ Al primo avvio trovi dati dimostrativi. Tocca il nome della band o l'ingranaggio
 
 Lo studio web è facoltativo e gira sul tuo PC. Non richiede un account.
 
-1. Scarica StagePilot-Studio-0.2.0-Windows-x64.exe dalle [Releases ufficiali](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.0-beta.1).
+1. Scarica StagePilot-Studio-0.2.1-Windows-x64.exe dalle [Releases ufficiali](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1).
 2. Apri l’EXE: si apre lo studio nel browser del PC, all’indirizzo http://127.0.0.1:8765. Non devi installare Python o Node.js.
 3. Lascia aperta la finestra di StagePilot mentre lavori o trasferisci i dati. Per terminare, chiudi quella finestra.
 
@@ -66,6 +66,29 @@ StagePilot elimina le righe di servizio riconosciute e prepara sezioni, testo e 
 La ricerca richiede Internet. Sul tablet usa lo studio PC configurato come collegamento al servizio; la pulizia e la compilazione manuale funzionano anche offline. Non c'è ancora importazione diretta da un URL Ultimate Guitar: incolla il testo che vuoi preparare.
 
 La bozza dell'importatore web resta nella stessa scheda del browser anche dopo un ricaricamento. Salva comunque il brano prima di chiudere il lavoro.
+
+## Sistemare testo e accordi sul PC
+
+Apri Repertorio e tocca il brano. Si apre l’Editor brano, con il lavoro a sinistra e l’anteprima a destra. Le modifiche restano una bozza finché premi Salva brano.
+
+1. In Accordi e sezioni, seleziona una lettera della riga: l’accordo sarà agganciato a quella posizione. Puoi anche mettere il cursore nel campo Testo riga.
+2. Scrivi l’accordo (per esempio Am7, Bb o F#/A#) e premi Inserisci / sostituisci. I pulsanti C, D, Am e gli altri inseriscono direttamente l’accordo nella posizione scelta.
+3. Per correggerlo, tocca la lettera con l’accordo e usa Sposta accordo oppure Rimuovi accordo.
+4. Modifica le parole nel campo Testo riga. Invio crea una nuova riga. Gli accordi successivi si spostano insieme al testo: dopo una riscrittura ampia della frase controlla gli agganci nell’anteprima.
+5. Scegli il nome di una Nuova sezione e premi Aggiungi sezione: viene inserita dopo la riga selezionata. Le frecce di una sezione muovono tutto il passaggio; Rimuovi intestazione conserva le righe sottostanti. Eliminare una riga elimina anche i suoi accordi e si può annullare.
+6. Premi Salva brano e poi Invia al tablet nello studio per trasferire il risultato.
+
+Dati del brano contiene titolo, artista, tonalità, BPM, durata, preparazione, tag e note. La dimensione dell’anteprima serve solo per controllare la leggibilità e non cambia la preferenza del tablet.
+
+Testo ChordPro permette anche la scrittura diretta: [Am] davanti a una sillaba e # Ritornello per una sezione. Le due modalità modificano lo stesso brano. Per incollare materiale grezzo da Ultimate Guitar usa prima Importa, che esegue la pulizia.
+
+Trasponi il brano cambia gli accordi riconosciuti in notazione C / Am / Bb e la tonalità dell’arrangiamento salvato, dopo una conferma con Applica trasposizione al brano. Le annotazioni non riconosciute e il testo restano intatti. La trasposizione personale del lettore rimane separata e non viene azzerata.
+
+Annulla modifica e Ripristina modifica valgono dentro l’editor (anche Ctrl+Z e Ctrl+Maiusc+Z / Ctrl+Y). Ctrl+S salva il brano. Dopo il salvataggio puoi usare Annulla dello studio per recuperare la revisione precedente.
+
+Se chiudi l’editor con modifiche aperte, puoi conservarne la bozza o scartarla. La bozza viene recuperata riaprendo lo stesso brano nella stessa scheda del browser, anche dopo un ricaricamento. Per un nuovo brano premi di nuovo Nuovo brano. Non è un backup permanente: salva prima di chiudere la scheda. Se il browser impedisce di conservare la bozza, l’editor lo segnala.
+
+Se la libreria cambia mentre stai modificando, il primo salvataggio può chiederti di riprovare: la bozza resta aperta. Un secondo tentativo conserva le modifiche indipendenti; se lo stesso campo è cambiato da entrambe le parti, compare un confronto tra la tua bozza e la versione salvata. Scegli quale conservare per ciascun campo e premi di nuovo Salva brano.
 
 ## Costruire una scaletta
 

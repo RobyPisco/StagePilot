@@ -242,7 +242,7 @@ export function mergeSongDraft(
       JSON.stringify(current[key]) !== JSON.stringify(draft[key])
     )
       throw new Error(
-        `Il campo «${key}» è cambiato anche sull’altro dispositivo. Chiudi e riapri il brano per confrontarlo; la bozza è ancora qui.`,
+        `Il campo «${key}» è cambiato anche sull’altro dispositivo. Confronta le versioni nell’editor prima di salvare; la bozza è ancora qui.`,
       );
     Object.assign(result, { [key]: draft[key] });
   }

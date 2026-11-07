@@ -35,7 +35,7 @@ def make_server(port=8765, data_dir=None):
         code=row[0] if row else ''.join(secrets.choice('0123456789') for _ in range(6))
         c.execute("INSERT OR IGNORE INTO config VALUES('pair_code',?)", (code,))
     class Handler(BaseHTTPRequestHandler):
-        server_version='StagePilot/0.1'
+        server_version='StagePilot/0.2.1'
         def log_message(self, *_): pass
         def local(self): return self.client_address[0] in ('127.0.0.1','::1')
         def authorized(self): return self.local() or secrets.compare_digest(self.headers.get('X-Code',''), code)
