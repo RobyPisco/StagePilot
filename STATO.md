@@ -1,3 +1,5 @@
+> Archivio del precedente progetto Backline. Per StagePilot vedere README.md e STATUS.md.
+
 # Stato dei lavori
 
 Aggiornato al **6 novembre 2026**. Il `README.md` dice cosa fa l'app e come si usa; qui c'è a che punto siamo,

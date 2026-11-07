@@ -15,7 +15,7 @@ from library import Library
 from metadata import MetadataLookup
 from transfers import TransferHub
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
 EMPTY = {'v': 4, 'curBand': 'b1', 'opt': {}, 'bands': [{'id': 'b1', 'name': 'COPYCUT', 'me': 'Tutti', 'cur': 'set1', 'songs': [], 'sets': [{'id': 'set1', 'name': 'La mia prima scaletta', 'items': []}], 'events': [], 'rehearsals': []}]}
 
 def lan_ip():

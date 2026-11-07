@@ -25,12 +25,17 @@ Al primo avvio trovi dati dimostrativi. Tocca il nome della band o l'ingranaggio
 
 Lo studio web è facoltativo e gira sul tuo PC. Non richiede un account.
 
-1. Installa Python 3.10 o successivo dal [sito ufficiale Python](https://www.python.org/downloads/windows/), includendo il launcher Python.
-2. Estrai StagePilot-Studio-Windows.zip in una cartella: non avviare il programma dall'interno dello ZIP.
-3. Apri StagePilot.cmd. Si apre lo studio nel browser del PC, all'indirizzo http://127.0.0.1:8765.
-4. Lascia aperta la finestra di StagePilot mentre usi lo studio o trasferisci i dati.
+1. Scarica StagePilot-Studio-0.2.0-Windows-x64.exe dalle [Releases ufficiali](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.0-beta.1).
+2. Apri l’EXE: si apre lo studio nel browser del PC, all’indirizzo http://127.0.0.1:8765. Non devi installare Python o Node.js.
+3. Lascia aperta la finestra di StagePilot mentre lavori o trasferisci i dati. Per terminare, chiudi quella finestra.
 
-Il pacchetto contiene già la pagina compilata: per usarlo non servono Node.js o Android Studio. Alla chiusura del programma i dati restano salvati nella cartella studio/data. Per spostare lo studio, conserva l'intera cartella oppure esporta il backup.
+Serve Windows 10/11 a 64 bit. L’EXE è una prima versione beta e non ha ancora la firma digitale del produttore: Windows può mostrarlo come applicazione non riconosciuta. Usa soltanto il file scaricato dal repository ufficiale.
+
+L’EXE conserva i dati in `%LOCALAPPDATA%\StagePilot\Studio`, separati dal programma. Puoi sostituire l’EXE per aggiornare senza cancellare la libreria. Per trasferire i dati usa il backup JSON nelle impostazioni.
+
+Se usavi lo studio avviato da StagePilot.cmd, i vecchi dati restano in studio/data: esporta il backup dal vecchio studio, chiudilo, avvia l’EXE e importa il backup nel nuovo. Avviare l’EXE mentre il vecchio studio usa già la porta 8765 riapre lo studio già attivo.
+
+In alternativa resta disponibile StagePilot-Studio-Windows.zip: estrailo, installa Python 3.10+ con il launcher dal [sito ufficiale](https://www.python.org/downloads/windows/) e apri StagePilot.cmd. In questa versione i dati stanno in studio/data nella cartella estratta.
 
 ## Collegare PC e tablet
 

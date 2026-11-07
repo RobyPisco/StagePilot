@@ -61,3 +61,12 @@ Resta da collaudare Band Live con due tablet fisici distinti in sala e da valuta
 Libreria reale conservata: 5 brani, scalette Serata tipo (6 voci) e Acustico (1). Dossier compilato solo nel concerto esplicitamente dimostrativo, con indicazioni “da confermare” e nessun numero telefonico inventato. Sessione di collaudo Band Live terminata; tablet aggiornato e tornato a Oggi. Backup personale separato dal kit, escluso da Git.
 
 Consegna: StagePilot-0.2.0-kit.zip con APK debug, studio Windows precompilato, guida e avvisi dipendenze. Per una futura pubblicazione stabile preparare una firma release e conservarla. Repository ancora privato: nessuna pubblicazione pubblica effettuata.
+
+
+## Prima distribuzione pubblica — v0.2.0-beta.1
+
+Repository pubblico su richiesta dell’autore, descrizione aggiornata e tre screenshot reali nel README. Licenza MIT con avvisi sulle dipendenze. EXE portatile Windows x64 compilato con PyInstaller 6.22.3 e Python 3.12: nessuna installazione Python richiesta. Dati in %LOCALAPPDATA%\StagePilot\Studio; la distribuzione parte vuota. Chi arriva dallo studio da sorgente migra con backup/importazione.
+
+Build riproducibile: tools/build_windows.py e tools/requirements-windows.txt. Collaudo tools/smoke_windows.py passato: avvio senza Python sul PATH, asset e guida inclusi, salvataggio SQLite nella cartella utente e riapertura dopo arresto dell’EXE. 37 test server ripassati dopo l’adattamento dei percorsi al bundle. Guide web/Android aggiornate; APK ricompilato.
+
+Release GitHub v0.2.0-beta.1: EXE autonomo, ZIP Windows con guida/licenze, APK debug, guida HTML e SHA256SUMS.txt. EXE non firmato digitalmente; APK di prova, non pubblicato sul Play Store. Restano i limiti del collaudo Band Live con un secondo tablet fisico e della prova musicale completa.
