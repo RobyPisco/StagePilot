@@ -15,6 +15,21 @@ fun prepareSong(raw: String, keepTab: Boolean = false): PreparedSong {
     var bpm: Int? = null
     var duration = ""
     val lines = original.split('\n').mapNotNull { line ->
+        val identity = Regex("""^\s*(Title|Titolo|Artist|Artista)\s*:\s*(.+?)\s*$""", RegexOption.IGNORE_CASE).matchEntire(line)
+        if (identity != null) {
+            val value = identity.groupValues[2]
+            meta = if (identity.groupValues[1].lowercase() in listOf("title", "titolo")) meta.copy(title = meta.title.ifBlank { value }) else meta.copy(artist = meta.artist.ifBlank { value })
+            removed++
+            return@mapNotNull null
+        }
+        val timing = Regex("""^\s*(Tempo|BPM|Duration|Durata)\s*:\s*(.+?)\s*$""", RegexOption.IGNORE_CASE).matchEntire(line)
+        if (timing != null) {
+            val value = timing.groupValues[2].replace(Regex("""\s*bpm$""", RegexOption.IGNORE_CASE), "")
+            if (timing.groupValues[1].lowercase() in listOf("tempo", "bpm")) bpm = value.toIntOrNull()?.takeIf { it in 20..400 }
+            else if (secs(value) > 0) duration = value
+            removed++
+            return@mapNotNull null
+        }
         SITE_TITLE.matchEntire(line)?.let {
             if (meta.title.isBlank()) meta = meta.copy(title = it.groupValues[1].trim(), artist = meta.artist.ifBlank { it.groupValues[2].trim() })
             removed++

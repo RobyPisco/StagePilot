@@ -40,6 +40,13 @@ class HttpTests(unittest.TestCase):
         bad=copy.deepcopy(EMPTY);bad['bands'][0]['sets'][0]['items']=[{'type':'song','id':'missing'}]
         self.assertEqual(400,self.call('/api/state',{'db':bad,'revision':1})[0])
         self.assertEqual(1,self.call('/api/state')[1]['revision'])
+    def test_metadata_lookup_is_authenticated_and_does_not_modify_library(self):
+        with patch('server.MetadataLookup.identify', return_value={'found':False,'candidates':[],'message':'No match'}) as identify:
+            self.assertEqual(200,self.call('/api/metadata',{'body':'A pasted chart'})[0])
+            identify.assert_called_once_with({'body':'A pasted chart'})
+            with patch.object(self.server.RequestHandlerClass,'local',return_value=False):
+                self.assertEqual(403,self.call('/api/metadata',{'body':'Private draft'})[0])
+            self.assertEqual(1,self.call('/api/state')[1]['revision'])
     def test_conflict_confirmation_must_match_reviewed_revision(self):
         base=copy.deepcopy(EMPTY)
         base['bands'][0]['songs']=[{'id':'s1','title':'Base','body':'[Am]x'}]

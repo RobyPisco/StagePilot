@@ -42,4 +42,14 @@ hello world
     @Test fun isolatedChordProChordIsMusicRatherThanASection() {
         assertEquals("# Intro\n[Am]",prepareSong("[Intro]\n[Am]").body)
     }
+    @Test fun pastedTimingHeadersAreMetadataAndNeverLyrics() {
+        val p = prepareSong("Title: Example\nArtist: A Band\nBPM: 129 bpm\nDuration: 3:28\n[Chorus]\n[Am]Carry us home")
+        assertEquals("Example", p.meta.title)
+        assertEquals("A Band", p.meta.artist)
+        assertEquals(129, p.bpm)
+        assertEquals("3:28", p.duration)
+        assertFalse(p.body.contains("Duration"))
+        assertFalse(p.body.contains("BPM"))
+        assertTrue(p.body.contains("Carry us home"))
+    }
 }

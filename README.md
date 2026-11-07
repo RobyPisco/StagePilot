@@ -4,7 +4,7 @@
 
 ## Funzioni del primo MVP
 
-- **Importazione:** incolla testo e accordi da Ultimate Guitar, oppure apri un file ChordPro/testo. Pulizia di intestazioni e residui del sito, tablatura opzionale, lettura di titolo/artista/tonalità/capotasto quando presenti, anteprima prima di salvare. Le parole non vengono riscritte e i BPM mancanti non vengono inventati.
+- **Importazione automatica:** incolla testo e accordi da Ultimate Guitar, oppure apri un file ChordPro/testo. La pulizia legge i metadati già presenti; il riconoscimento confronta le frasi con LRCLIB e propone titolo/artista, durata e BPM della registrazione Deezer. Mostra album, fonti e alternative, senza modificare le parole, gli accordi o le correzioni manuali. Se il catalogo non ha il BPM, lo dichiara e lascia il campo modificabile. Il web conserva la bozza nella scheda del browser anche dopo un ricaricamento. Su Android il riconoscimento online usa lo studio PC collegato nelle impostazioni; importazione e lettura restano disponibili offline.
 - **Repertorio:** creazione, modifica, ricerca, tag, BPM, tonalità, durata, note condivise e per ruolo, stato di preparazione e appunto di prova.
 - **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come file o elenco su Android.
 - **Prova guidata:** agenda di passaggi specifici, scelta della sezione del brano, obiettivo, ruolo responsabile, decisioni condivise, stato da risolvere/risolto e filtro personale. Apertura del solo passaggio nel lettore, senza modificare il chart originale. Sessioni cronometrate con riepilogo nel registro.
@@ -57,7 +57,7 @@ Per le sole prove via cavo si può usare `adb reverse tcp:8765 tcp:8765` e inser
 
 - JVM Android: test del motore musicale, importazione, normalizzazione, pacchetti, scalette e preparazione della serata.
 - Web: test del convertitore distribuito, cancellazione con rimozione dei riferimenti, tempi/trasposizione e confronto delle bozze.
-- Server: test SQLite, riapertura, annullamento, revisioni, autenticazione LAN, conflitti, passaggi di prova e richieste HTTP.
+- Server: test SQLite, riapertura, annullamento, revisioni, autenticazione LAN, conflitti, passaggi di prova e richieste HTTP. Il riconoscimento ha test su testi non corrispondenti, cover/live, BPM mancanti, fonte della registrazione, cache, rete assente e limiti dei servizi.
 - **Fire HD 8 / Android 10:** due test strumentati su conversione ICU e transazioni SQLite, incluso errore a metà scrittura. Provati anche importazione dal browser, persistenza dopo ricaricamento, trasferimento USB e Wi-Fi, conflitto con revisione superata e apertura del singolo ritornello sul tablet.
 
 ```powershell
@@ -85,3 +85,5 @@ La sincronizzazione è avviata dal pulsante sul tablet, non è collaborazione in
 `preview/` conserva la proposta grafica approvata. L'app funzionante è in `app/` e `web/`; `tools/pagina-pc/` resta come riferimento dello strumento precedente. La conversione browser condivisa deriva da Backline ed è distribuita con il suo codice nel progetto.
 
 Ispirazioni di prodotto: [MobileSheets](https://www.zubersoft.com/mobilesheets/), [BandHelper Practice](https://www.bandhelper.com/tutorials/practicing.html), [SongbookPro Manager](https://songbook-pro.com/docs/manager/) e [ChordPro](https://www.chordpro.org/chordpro/chordpro-directives/).
+
+Il riconoscimento usa le API pubbliche di [LRCLIB](https://lrclib.net/docs) e [Deezer](https://developers.deezer.com/api/track). Le frasi candidate vengono cercate online; il testo completo recuperato per il confronto rimane in memoria temporanea e non sostituisce quello incollato. Le risposte positive sono memorizzate in una cache limitata in memoria per un’ora.

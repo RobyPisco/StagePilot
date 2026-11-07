@@ -324,6 +324,8 @@ private fun App(
         "import" -> ImportScreen(
             newId = newId,
             initial = importText,
+            onlineAvailable = pcAddr.isNotBlank() && pcCode.isNotBlank(),
+            identify = { body, title, artist -> PcClient.identify(pcAddr, pcCode, body, title, artist) },
             onContinue = { draft = it; editId = null; route = "edit" },
             onClose = { route = "main" },
         )

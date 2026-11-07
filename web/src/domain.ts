@@ -239,8 +239,37 @@ export function prepare(
   artist: string;
   key: string;
   capo: number;
+  bpm: number | null;
+  dur: string;
   removed: number;
 } {
+  let bpm: number | null = null,
+    dur = "",
+    headerTitle = "",
+    headerArtist = "";
+  let timingRemoved = 0;
+  raw = raw.replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ");
+  raw = raw
+    .split("\n")
+    .filter((line) => {
+      const match =
+        /^\s*(?:\{\s*)?(tempo|bpm|duration|durata|title|titolo|artist|artista)\s*:\s*([^}]+)\}?\s*$/i.exec(
+          line,
+        );
+      if (!match) return true;
+      const name = match[1].toLowerCase(),
+        value = match[2].trim();
+      if (["tempo", "bpm"].includes(name)) {
+        const n = Number(value.replace(/\s*bpm\s*$/i, ""));
+        if (Number.isInteger(n) && n >= 20 && n <= 400) bpm = n;
+      } else if (["duration", "durata"].includes(name)) {
+        if (seconds(value)) dur = value;
+      } else if (["title", "titolo"].includes(name)) headerTitle ||= value;
+      else headerArtist ||= value;
+      timingRemoved++;
+      return false;
+    })
+    .join("\n");
   const titleLine = raw
     .split("\n")
     .map((l) => l.match(/^\s*(.+?)\s+(?:chords?|tab)\s+by\s+(.+?)\s*$/i))
@@ -266,12 +295,15 @@ export function prepare(
   const result = pc.toChordPro(text, { dropTab: !keepTab });
   return {
     body: result.body,
-    title: result.meta.title || titleLine?.[1] || "",
-    artist: result.meta.artist || titleLine?.[2] || "",
+    title: headerTitle || result.meta.title || titleLine?.[1] || "",
+    artist: headerArtist || result.meta.artist || titleLine?.[2] || "",
     key: result.meta.key || "",
     capo: Number(result.meta.capo) || 0,
+    bpm,
+    dur,
     removed:
       Object.values(result.removed).reduce((n, v) => n + v, 0) +
-      (titleLine ? 1 : 0),
+      (titleLine ? 1 : 0) +
+      timingRemoved,
   };
 }

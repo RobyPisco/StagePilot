@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,13 +47,18 @@ import it.stagepilot.app.core.renderSheet
 import it.stagepilot.app.core.tabToChordPro
 import it.stagepilot.app.core.prepareSong
 import it.stagepilot.app.data.Song
+import it.stagepilot.app.data.MetadataCandidate
+import it.stagepilot.app.data.MetadataResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import it.stagepilot.app.core.secs
 
 /* Importazione: si incolla un tab "accordi sopra il testo" (Ultimate Guitar e
    simili) oppure un ChordPro, e si vede subito come verrà letto. Con
    "Continua" il risultato passa all'editor, dove si rifinisce e si salva. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit, onClose: () -> Unit) {
+fun ImportScreen(newId: String, initial: String = "", onlineAvailable: Boolean = false, identify: (suspend (String, String, String) -> MetadataResult)? = null, onContinue: (Song) -> Unit, onClose: () -> Unit) {
     var raw by rememberSaveable { mutableStateOf(initial) }
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -62,12 +70,54 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
     }
     var keepTab by rememberSaveable { mutableStateOf(false) }
     val prepared = remember(raw, keepTab) { prepareSong(raw, keepTab) }
+    var title by rememberSaveable(raw) { mutableStateOf(prepared.meta.title) }
+    var artist by rememberSaveable(raw) { mutableStateOf(prepared.meta.artist) }
+    var bpm by rememberSaveable(raw) { mutableStateOf(prepared.bpm?.toString().orEmpty()) }
+    var duration by rememberSaveable(raw) { mutableStateOf(prepared.duration) }
+    var source by remember(raw) { mutableStateOf("") }
+    var loading by remember(raw) { mutableStateOf(false) }
+    var message by remember(raw) { mutableStateOf("") }
+    var selected by remember(raw) { mutableStateOf<MetadataCandidate?>(null) }
+    var alternatives by remember(raw) { mutableStateOf<List<MetadataCandidate>>(emptyList()) }
+    var protected by rememberSaveable(raw) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var retry by remember { mutableStateOf(0) }
+    var choice by remember(raw) { mutableStateOf<MetadataCandidate?>(null) }
+    val uriHandler = LocalUriHandler.current
+    LaunchedEffect(raw, retry) {
+        if (raw.isBlank()) return@LaunchedEffect
+        if (!onlineAvailable || identify == null) { message = "Per il riconoscimento online collega lo studio web nelle impostazioni. Puoi compilare i dati a mano."; return@LaunchedEffect }
+        if (retry == 0 && title.isNotBlank() && artist.isNotBlank() && bpm.isNotBlank() && duration.isNotBlank()) return@LaunchedEffect
+        delay(850)
+        val startedTitle = choice?.title ?: title
+        val startedArtist = choice?.artist ?: artist
+        val originalTitle = title
+        val originalArtist = artist
+        val forced = choice != null
+        loading = true
+        message = "Riconosco il testo e cerco la registrazione…"
+        try {
+            val result = identify(prepared.body, startedTitle, startedArtist)
+            if (title != originalTitle || artist != originalArtist) { message = "Titolo o artista modificati: premi Cerca di nuovo."; return@LaunchedEffect }
+            message = result.message
+            alternatives = result.candidates
+            result.selected?.takeIf { result.found }?.let { pick ->
+                selected = pick
+                if (protected and 1 == 0 && (forced || prepared.meta.title.isBlank())) title = pick.title
+                if (protected and 2 == 0 && (forced || prepared.meta.artist.isBlank())) artist = pick.artist
+                if (protected and 4 == 0 && (forced || prepared.bpm == null) && (forced || pick.bpm != null)) bpm = pick.bpm?.toString().orEmpty()
+                if (protected and 8 == 0 && (forced || prepared.duration.isBlank()) && (forced || pick.dur.isNotBlank())) duration = pick.dur
+                source = pick.sources.joinToString("\n") { "${it.label}: ${it.url}" }
+            }
+        } catch (e: CancellationException) { throw e
+        } catch (e: Exception) { message = e.message ?: "Ricerca non riuscita. Testo e accordi sono conservati."
+        } finally { loading = false; choice = null }
+    }
     val converted = prepared.body
     val preview = remember(converted) { renderSheet(converted) }
     val chords = remember(converted) { Regex("""\[[^\]]+]""").findAll(converted).count() }
     val sections = preview.count { it is SheetLine.Section }
     val lines = preview.count { it is SheetLine.Lyric }
-    val ready = converted.isNotBlank()
+    val ready = converted.isNotBlank() && !loading && title.isNotBlank() && (bpm.isBlank() || bpm.toIntOrNull()?.let { it in 20..400 } == true) && (duration.isBlank() || secs(duration) > 0)
 
     BackHandler(onBack = onClose)
 
@@ -91,7 +141,7 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
                         .background(if (ready) Palco.Amber else Palco.Outline, RoundedCornerShape(10.dp))
                         .clickable(enabled = ready) {
                             val meta = prepared.meta
-                            onContinue(Song(id = newId, title = meta.title, artist = meta.artist, key = meta.key, capo = meta.capo, bpm = prepared.bpm, dur = prepared.duration, body = converted))
+                            onContinue(Song(id = newId, title = title, artist = artist, key = meta.key, capo = meta.capo, bpm = bpm.toIntOrNull(), dur = duration, body = converted, source = source))
                         }
                         .padding(horizontal = 18.dp, vertical = 10.dp),
                 )
@@ -116,6 +166,27 @@ fun ImportScreen(newId: String, initial: String = "", onContinue: (Song) -> Unit
                 androidx.compose.material3.FilterChip(selected = keepTab, onClick = { keepTab = !keepTab }, label = { Text("Mantieni tablatura per chitarra") })
 
                 if (raw.isNotBlank()) {
+                    Text("DATI DEL BRANO", color = Palco.Dim, fontFamily = Condensed, fontSize = 12.sp)
+                    PalcoField(title, { title = it; protected = protected or 1; source = ""; selected = null }, "Titolo")
+                    PalcoField(artist, { artist = it; protected = protected or 2; source = ""; selected = null }, "Artista")
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        PalcoField(bpm, { bpm = it; protected = protected or 4 }, "BPM", modifier = Modifier.weight(1f), keyboard = KeyboardType.Number)
+                        PalcoField(duration, { duration = it; protected = protected or 8 }, "Durata", modifier = Modifier.weight(1f), supporting = "es. 3:40")
+                    }
+                    Text(message, color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                    selected?.let { pick ->
+                        Text("Versione proposta: ${pick.album}", color = Palco.Amber, fontFamily = Condensed, fontSize = 14.sp)
+                        pick.sources.forEach { s ->
+                            Text(s.label, color = Palco.Amber, fontFamily = Condensed, fontSize = 13.sp, modifier = Modifier.clickable { uriHandler.openUri(s.url) }.padding(vertical = 8.dp))
+                        }
+                    }
+                    if (!loading && onlineAvailable) GhostButton("Cerca di nuovo") { retry++; choice = null }
+                    if (!loading && alternatives.isNotEmpty()) {
+                        Text("ALTRE VERSIONI E ARTISTI", color = Palco.Dim, fontFamily = Condensed, fontSize = 12.sp)
+                        alternatives.forEach { candidate ->
+                            GhostButton("${candidate.title} · ${candidate.artist}") { protected = 0; choice = candidate; retry++ }
+                        }
+                    }
                     Text(
                         "COSÌ SI LEGGERÀ", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 6.dp),

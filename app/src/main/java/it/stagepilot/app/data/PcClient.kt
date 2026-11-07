@@ -10,6 +10,10 @@ import kotlinx.serialization.Serializable
 class SyncConflict(val paths: List<String>, val revision: Int) : Exception("Le stesse informazioni sono cambiate sul PC e sul tablet.")
 @Serializable private data class SyncRequest(val db: DB, val base: DB? = null, val policy: String? = null, val revision: Int? = null)
 @Serializable private data class SyncResponse(val db: DB? = null, val conflicts: List<String> = emptyList(), val revision: Int = 0, val error: String = "")
+@Serializable private data class MetadataRequest(val body: String, val title: String, val artist: String)
+@Serializable data class MetadataSource(val label: String = "", val url: String = "")
+@Serializable data class MetadataCandidate(val title: String = "", val artist: String = "", val album: String = "", val dur: String = "", val bpm: Int? = null, val recordingUrl: String = "", val sources: List<MetadataSource> = emptyList())
+@Serializable data class MetadataResult(val found: Boolean = false, val selected: MetadataCandidate? = null, val candidates: List<MetadataCandidate> = emptyList(), val message: String = "", val error: String = "")
 
 /** Un errore da dire a chi usa l'app, in italiano. */
 class PcException(message: String) : Exception(message)
@@ -17,6 +21,21 @@ class PcException(message: String) : Exception(message)
 /* Scarica la coda dei brani dalla pagina del PC (tools/pagina-pc), nella rete di casa. Il PC dà un
    codice di 4 cifre: senza, la coda non si legge. Solo HTTP in chiaro: è la rete di casa. */
 object PcClient {
+    suspend fun identify(address: String, code: String, body: String, title: String, artist: String): MetadataResult = withContext(Dispatchers.IO) {
+        guard {
+            val c = open(address, code, "/api/metadata", post = true)
+            c.readTimeout = 30000
+            try {
+                c.outputStream.use { it.write(AppJson.encodeToString(MetadataRequest.serializer(), MetadataRequest(body, title, artist)).toByteArray(Charsets.UTF_8)) }
+                val status = c.responseCode
+                val text = (if (status < 400) c.inputStream else c.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                val result = runCatching { AppJson.decodeFromString(MetadataResult.serializer(), text) }.getOrNull()
+                    ?: throw PcException("Aggiorna StagePilot Studio sul PC per il riconoscimento online.")
+                if (status != 200) throw PcException(result.error.ifBlank { "Ricerca non disponibile. Puoi compilare i dati a mano." })
+                result
+            } finally { c.disconnect() }
+        }
+    }
     suspend fun sync(address: String, code: String, current: DB, base: String?, policy: String? = null, revision: Int? = null): DB = withContext(Dispatchers.IO) {
         guard {
             val c = open(address, code, "/api/sync", post = true)
