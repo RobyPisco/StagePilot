@@ -417,6 +417,7 @@ function App() {
                   <Settings2 />
                   Impostazioni
                 </button>
+                <a className="sp-secondary" style={{textDecoration:'none'}} href="/guida.html" target="_blank" rel="noreferrer">Guida e aiuto</a>
                 <div className="sp-band">
                   <span className="sp-avatar">
                     {band.name.slice(0, 2).toUpperCase()}

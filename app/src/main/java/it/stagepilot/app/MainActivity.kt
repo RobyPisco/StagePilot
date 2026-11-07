@@ -150,6 +150,9 @@ private fun App(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("pc", Context.MODE_PRIVATE) }
+    val liveController = remember { it.stagepilot.app.data.BandLiveController(context.applicationContext) }
+    val bandLive by liveController.status.collectAsStateWithLifecycle()
+    androidx.compose.runtime.DisposableEffect(liveController) { onDispose { liveController.close() } }
     val db by store.db.collectAsStateWithLifecycle()
     val band = db.band
     val saveError by store.error.collectAsStateWithLifecycle()
@@ -204,7 +207,7 @@ private fun App(
                 val sent = store.db.value
                 val address = pcAddr
                 val code = pcCode
-                val merged = PcClient.sync(address, code, sent, store.syncBase(), policy, revision)
+                val merged = PcClient.sync(address, code, sent, store.syncBase(), policy, revision, delivery = remoteTransfer > 0)
                 check(address == pcAddr && code == pcCode) { "Il collegamento al PC è cambiato. Sincronizza di nuovo." }
                 store.acceptSync(merged, sent)
                 pcStatus = "PC e tablet sono aggiornati."
@@ -350,6 +353,22 @@ private fun App(
     }
 
     when (route) {
+        "guide" -> it.stagepilot.app.ui.GuideScreen {route="main";tab=0}
+        "band" -> it.stagepilot.app.ui.BandLiveScreen(db,liveController,bandLive,{route="band-stage"},{route="main";tab=0})
+        "band-stage" -> {
+            val library=bandLive.library
+            if(library==null) route="band" else {
+                val shared=library.db.band
+                val preview=shared.copy(me=band.me,songs=shared.songs.map{s->
+                    if(bandLive.role=="leader")band.song(s.id)?.let{s.copy(tr=it.tr,scroll=it.scroll)}?:s else s
+                })
+                LiveScreen(db=library.db.copy(opt=db.opt,bands=listOf(preview)),startIndex=bandLive.cue?.index?:0,store=store,
+                    onClose={route="band"},liveState=bandLive,
+                    onLiveCue={i,p,skip,anchor,action->liveController.publish(i,p,skip,anchor,action)},
+                    onFollowingChange={liveController.follow(it)},
+                    onPersonalSongChange={id,change->if(bandLive.role=="leader")store.updateSong(id,change)else liveController.updateSong(id,change)})
+            }
+        }
         "import" -> ImportScreen(
             newId = newId,
             initial = importText,
@@ -366,7 +385,7 @@ private fun App(
                 val focus = song.copy(body = it.stagepilot.app.core.passageBody(song.body, practiceSection))
                 val set = it.stagepilot.app.data.SetList("practice-view", song.title, listOf(SetItem("song", id = song.id)))
                 val preview = band.copy(songs = band.songs.map { if (it.id == song.id) focus else it }, sets = listOf(set), cur = set.id)
-                LiveScreen(db.copy(bands = db.bands.map { if (it.id == band.id) preview else it }), 0, store) { route = "main"; tab = 3 }
+                LiveScreen(db.copy(bands = db.bands.map { if (it.id == band.id) preview else it }), 0, store, onClose = { route = "main"; tab = 3 })
             }
         }
 
@@ -396,7 +415,7 @@ private fun App(
             0 -> HomeScreen(db, onStage = { setId -> store.updateBand { it.copy(cur = setId) }; liveAt = 0; route = "live" },
                 onImport = { draft = null; importText = ""; newId = store.newId("s"); route = "import" },
                 onConcerts = { tab = 4 }, onPractice = { practiceSetScope = ""; tab = 3 }, onSettings = { tab = 5 },
-                pcConfigured = pcAddr.isNotBlank() && pcCode.isNotBlank(), pcBusy = pcBusy, pcStatus = pcStatus, onSync = { fetchPc(false) })
+                pcConfigured = pcAddr.isNotBlank() && pcCode.isNotBlank(), pcBusy = pcBusy, pcStatus = pcStatus, onSync = { fetchPc(false) }, onBandLive={route="band"}, onGuide={route="guide"})
             2 -> SetlistScreen(
             db = db,
             editing = editingSet,

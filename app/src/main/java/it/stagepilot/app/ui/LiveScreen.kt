@@ -52,6 +52,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +80,8 @@ import it.stagepilot.app.data.Entry
 import it.stagepilot.app.data.Store
 import it.stagepilot.app.data.entries
 import it.stagepilot.app.data.SetItem
+import it.stagepilot.app.data.BandLiveState
+import it.stagepilot.app.data.Song
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -88,7 +92,9 @@ import kotlinx.coroutines.ensureActive
    portata. Lo schermo non si spegne finché è aperta. */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
+fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveState: BandLiveState? = null,
+    onLiveCue: ((Int,Boolean,Boolean,String,Long)->Unit)? = null, onFollowingChange: ((Boolean)->Unit)? = null,
+    onPersonalSongChange: ((String,(Song)->Song)->Unit)? = null) {
     val band = db.band
     val opt = db.opt
     val entries = band.entries()
@@ -108,6 +114,13 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     val entry = entries[index.coerceIn(0, entries.lastIndex)]
     var leadRemaining by remember(index) { mutableIntStateOf(0) }
     var skipLead by remember(index) { mutableStateOf(false) }
+    var sectionPicker by remember { mutableStateOf(false) }
+    var liveAnchor by remember(index) { mutableStateOf("") }
+    var liveAction by remember { androidx.compose.runtime.mutableLongStateOf(0) }
+    var appliedAction by remember(liveState?.library?.session) { androidx.compose.runtime.mutableLongStateOf(-1) }
+    val sectionOffsets=remember(index) {mutableMapOf<String,Int>()}
+    fun personalSong(id:String,change:(Song)->Song) { if(onPersonalSongChange!=null)onPersonalSongChange(id,change) else store.updateSong(id,change) }
+    fun freeReading(){if(liveState?.role=="follower")onFollowingChange?.invoke(false)}
     val next = entries.getOrNull(index + 1)
     var trackElapsed by remember(index) { mutableIntStateOf(0) }
     LaunchedEffect(index) { while (true) { delay(1000); trackElapsed++ } }
@@ -125,10 +138,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
     LaunchedEffect(Unit) { while (true) { delay(1000); elapsed++ } }
 
     fun go(delta: Int) {
+        freeReading()
         val n = index + delta
         if (n in entries.indices) { playing = false; index = n }
     }
     fun togglePlay() {
+        freeReading()
         if (entry !is Entry.Track) return
         if (playing) { playing = false; return }
         if (scroll.maxValue <= 0) return
@@ -138,6 +153,25 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
         }
     }
     LaunchedEffect(index) { scroll.scrollTo(0) }
+    val remote=liveState?.cue
+    LaunchedEffect(remote?.sequence,liveState?.following) {
+        if(liveState?.role=="follower"&&liveState.following&&remote!=null) index=remote.index.coerceIn(0,entries.lastIndex)
+    }
+    LaunchedEffect(index,remote?.sequence,liveState?.following) {
+        if(liveState?.role=="follower"&&liveState.following&&remote!=null&&index==remote.index) {
+            skipLead=remote.skipLead;playing=remote.playing
+            if(remote.action!=appliedAction) {
+                appliedAction=remote.action
+                if(remote.anchor.isNotBlank()) {
+                    repeat(8){ if(remote.anchor!="@top"&&remote.anchor !in sectionOffsets) {androidx.compose.runtime.withFrameNanos{it}} }
+                    scroll.scrollTo(if(remote.anchor=="@top")0 else sectionOffsets[remote.anchor]?:scroll.value)
+                }
+            }
+        }
+    }
+    LaunchedEffect(index,playing,skipLead,liveAnchor,liveAction,liveState?.role) {
+        if(liveState?.role=="leader")onLiveCue?.invoke(index,playing,skipLead,liveAnchor,liveAction)
+    }
 
     // battito: lampeggio (striscia e cerchio) e, se lo accendi toccando il cerchio, il tic del metronomo
     val songBpm = (entry as? Entry.Track)?.song?.bpm?.takeIf { it in 20..300 }
@@ -258,6 +292,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
+        liveState?.let { session ->
+            Row(Modifier.fillMaxWidth().background(Palco.AmberDeep).padding(horizontal=14.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
+                Text(if(session.role=="leader")"BAND LIVE · Capofila · ${session.peers} tablet" else if(!session.connected)session.message else if(session.following)"BAND LIVE · Segui il capofila" else "BAND LIVE · Lettura libera",color=Palco.Amber,fontFamily=Sans,fontSize=12.sp,modifier=Modifier.weight(1f))
+                if(session.role=="follower") GhostButton(if(session.following)"Lettura libera" else "Segui capofila") {onFollowingChange?.invoke(!session.following)}
+            }
+        }
 
         // chart
         Box(
@@ -300,7 +340,11 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                                 Text(txt, color = Palco.Ink, fontFamily = Condensed, fontSize = 15.sp)
                             }
                         }
-                        lines.forEach { l -> SheetLineView(l, opt.fs) }
+                        val seen=mutableSetOf<String>()
+                        lines.forEach { l ->
+                            if(l is SheetLine.Section && seen.add(l.text)) Box(Modifier.onGloballyPositioned {sectionOffsets[l.text]=it.positionInParent().y.toInt()}) {SheetLineView(l,opt.fs)}
+                            else SheetLineView(l,opt.fs)
+                        }
                     }
                 }
             }
@@ -325,6 +369,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
             )
             if (band.cur != "practice-view") GhostButton("Regia · ~${mmss(remaining)}") { overview = true }
+            if((entry as? Entry.Track)?.song?.body?.lineSequence()?.any{it.startsWith('#')}==true) GhostButton("Sezioni") {sectionPicker=true}
             Row(
                 Modifier.clickable { toolsOpen = !toolsOpen }.heightIn(min = 44.dp).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -345,12 +390,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             val song = (entry as? Entry.Track)?.song
-            ToolButton("−", enabled = song != null) { song?.let { s -> store.updateSong(s.id) { it.copy(tr = (it.tr - 1).coerceIn(-11, 11)) } } }
+            ToolButton("−", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr - 1).coerceIn(-11, 11)) } } }
             Text(
                 (song?.tr ?: 0).let { if (it > 0) "+$it" else "$it" }, color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.width(30.dp),
             )
-            ToolButton("+", enabled = song != null) { song?.let { s -> store.updateSong(s.id) { it.copy(tr = (it.tr + 1).coerceIn(-11, 11)) } } }
+            ToolButton("+", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr + 1).coerceIn(-11, 11)) } } }
             Spacer(Modifier.weight(1f))
             ToolButton("Do Re Mi", active = opt.italian) { store.updateOptions { it.copy(notation = if (it.notation == "it") "en" else "it") } }
             ToolButton("A−") { store.updateOptions { it.copy(fs = (it.fs - 2).coerceIn(14, 48)) } }
@@ -375,12 +420,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                         color = Palco.Dim, fontFamily = Condensed, fontSize = 11.sp,
                     )
                 }
-                ToolButton("−") { store.updateSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, -1)) } }
+                ToolButton("−") { personalSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, -1)) } }
                 Text(
                     "×" + speedLabel(s.scroll), color = Palco.Ink, fontFamily = Mono,
                     fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.width(54.dp),
                 )
-                ToolButton("+") { store.updateSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, +1)) } }
+                ToolButton("+") { personalSong(s.id) { it.copy(scroll = stepSpeed(it.scroll, +1)) } }
             }
         }
 
@@ -410,7 +455,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
             Control(if (playing) Ic.Pause else Ic.Play, if (playing) "Pausa" else "Play", primary = true, active = playing) {
                 togglePlay()
             }
-            Control(Ic.Stop, "Stop") { playing = false; skipLead = false; scope.launch { scroll.animateScrollTo(0) } }
+            Control(Ic.Stop, "Stop") { freeReading(); playing = false; skipLead = false; liveAnchor="@top";liveAction++;scope.launch { scroll.animateScrollTo(0) } }
             Control(Ic.Next, "Succ") { go(1) }
             Control(Ic.Struct, "Strut", active = struct) { struct = !struct }
             Control(Ic.Lock, "Blocca", active = locked, alwaysOn = true) { locked = !locked }
@@ -425,13 +470,23 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit) {
                     val e = entries[n]
                     val name = when (e) { is Entry.Track -> e.song.title; is Entry.Mark -> e.label }
                     val detail = when (e) { is Entry.Track -> listOfNotNull(e.song.key.takeIf { it.isNotBlank() }, e.song.bpm?.let { "$it BPM" }, e.song.dur.takeIf { it.isNotBlank() }).joinToString(" · "); is Entry.Mark -> "Pausa · ${e.dur}" }
-                    Column(Modifier.fillMaxWidth().clickable { playing = false; index = n; overview = false }.padding(vertical = 11.dp)) {
+                    Column(Modifier.fillMaxWidth().clickable { freeReading();playing = false; index = n; overview = false }.padding(vertical = 11.dp)) {
                         Text("${if (n == index) "▶ " else ""}${n + 1}. $name", color = if (n == index) Palco.Amber else Palco.Ink, fontFamily = Sans, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         Text(detail, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp)
                     }
                 }
             }
-            GhostButton("+ Richiesta fuori scaletta", Modifier.padding(top = 15.dp)) { overview = false; requestSong = true }
+            if(liveState==null) GhostButton("+ Richiesta fuori scaletta", Modifier.padding(top = 15.dp)) { overview = false; requestSong = true }
+        }
+    }
+    if(sectionPicker) PalcoDialog("Vai a una sezione", "", null, {sectionPicker=false}) {
+        Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+            (entry as? Entry.Track)?.song?.body?.lineSequence()?.filter{it.startsWith('#')}?.map{it.removePrefix("#").trim()}?.distinct()?.forEach {label->
+                GhostButton(label,Modifier.fillMaxWidth().padding(bottom=6.dp)) {
+                    freeReading();playing=false;liveAnchor=label;liveAction++;sectionPicker=false
+                    scope.launch{scroll.animateScrollTo(sectionOffsets[label]?:0)}
+                }
+            }
         }
     }
     if (requestSong) PalcoDialog("Richiesta dal pubblico", "", null, { requestSong = false }) {

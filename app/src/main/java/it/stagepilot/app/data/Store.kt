@@ -57,6 +57,14 @@ class Store(context: Context) {
         return true
     }
     fun saveEvent(event: Gig) = updateBand { b -> b.copy(events = b.events.filterNot { it.id == event.id } + event) }
+    @Synchronized fun saveEventDraft(expected: Gig, draft: Gig): Boolean {
+        if (_db.value.band.events.firstOrNull { it.id == expected.id } != expected) {
+            _error.value = "La serata è cambiata durante la modifica. La bozza resta aperta: confronta gli aggiornamenti prima di salvare."
+            return false
+        }
+        saveEvent(draft)
+        return _db.value.band.events.firstOrNull { it.id == draft.id } == draft
+    }
     fun deleteEvent(id: String) = updateBand { b -> b.copy(events = b.events.filterNot { it.id == id }) }
     fun logRehearsal(session: Rehearsal) = updateBand { b -> b.copy(rehearsals = (b.rehearsals + session).takeLast(100)) }
     fun saveTask(task: PracticeTask) = updateBand { b -> b.copy(practiceTasks = b.practiceTasks.filterNot { it.id == task.id } + task) }

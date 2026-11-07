@@ -19,6 +19,8 @@ import {
   sections,
   preparation,
 } from "./domain";
+import { Dossier } from "./Dossier";
+import { mergeGigDraft } from "./dossier-domain";
 
 type Commit = (
   fn: (db: DB, band: Band) => void,
@@ -384,6 +386,13 @@ export function Concerts({
   openPractice: (set: string) => void;
 }) {
   const [draft, setDraft] = useState<Gig | null>(null);
+  const initialEvent = useRef<Gig | null>(null);
+  const [dossierId, setDossierId] = useState("");
+  const dossier = band.events?.find((g) => g.id === dossierId);
+  if (dossier)
+    return (
+      <Dossier gig={dossier} commit={commit} close={() => setDossierId("")} />
+    );
   return (
     <>
       <div className="sp-page-head">
@@ -447,10 +456,19 @@ export function Concerts({
               <div className="sp-end-actions">
                 <button
                   className="sp-secondary"
-                  onClick={() => setDraft({ ...g })}
+                  onClick={() => {
+                    initialEvent.current = structuredClone(g);
+                    setDraft({ ...g });
+                  }}
                 >
                   <Pencil />
                   Modifica
+                </button>
+                <button
+                  className="sp-secondary"
+                  onClick={() => setDossierId(g.id)}
+                >
+                  Dossier del concerto
                 </button>
                 <button
                   className="sp-secondary"
@@ -540,9 +558,20 @@ export function Concerts({
               onClick={async () => {
                 if (
                   await commit((_, b) => {
+                    const current = b.events.find((g) => g.id === draft.id);
+                    const next =
+                      initialEvent.current?.id === draft.id
+                        ? current
+                          ? mergeGigDraft(initialEvent.current, draft, current)
+                          : (() => {
+                              throw new Error(
+                                "La serata è stata rimossa. La bozza è conservata.",
+                              );
+                            })()
+                        : { ...draft, title: draft.title.trim() };
                     b.events = (b.events || [])
                       .filter((g) => g.id !== draft.id)
-                      .concat({ ...draft, title: draft.title.trim() });
+                      .concat(next);
                   }, "Serata salvata.")
                 )
                   setDraft(null);

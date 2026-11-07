@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 MISSING = object()
-ENTITY_LISTS = {'bands', 'songs', 'sets', 'events', 'rehearsals', 'practiceTasks'}
+ENTITY_LISTS = {'bands', 'songs', 'sets', 'events', 'rehearsals', 'practiceTasks', 'contacts', 'checklist', 'stagePlot', 'inputs'}
 
 def validate_db(db):
     if not isinstance(db, dict) or not isinstance(db.get('bands'), list) or not db['bands']:
@@ -22,6 +22,12 @@ def validate_db(db):
     for band in db['bands']:
         for name in ('songs', 'sets', 'events', 'rehearsals', 'practiceTasks'): ids(band.get(name, []))
         have = {s['id'] for s in band.get('songs', [])}
+        for gig in band.get('events', []):
+            for name in ('contacts','checklist','stagePlot','inputs'): ids(gig.get(name, []))
+            for position in gig.get('stagePlot', []):
+                if any(type(position.get(k)) not in (int,float) or not 0 <= position[k] <= 100 for k in ('x','y')): raise ValueError('Posizione sul palco non valida.')
+            for name in ('address','arrival','soundcheck','doors','end'):
+                if not isinstance(gig.get(name,''),str): raise ValueError('Informazioni del concerto non valide.')
         for task in band.get('practiceTasks', []):
             if task.get('songId') not in have or not isinstance(task.get('goal'), str) or not task['goal'].strip(): raise ValueError('Passaggio di prova non valido.')
         for song in band.get('songs', []):
@@ -43,6 +49,9 @@ def shared_view(db):
         band.setdefault('practiceTasks', [])
         band.pop('me', None)
         band.pop('cur', None)
+        for gig in band.get('events', []):
+            for name in ('address','arrival','soundcheck','doors','end'): gig.setdefault(name, '')
+            for name in ('contacts','checklist','stagePlot','inputs'): gig.setdefault(name, [])
         for s in band.get('songs', []):
             for k in ('tr', 'scroll'): s.pop(k, None)
     return result
@@ -65,13 +74,22 @@ def personal_view(shared, personal):
             s['tr'], s['scroll'] = old.get('tr', 0), old.get('scroll', 1)
     return db
 
-def merge_libraries(base, device, pc, policy=None):
+def merge_libraries(base, device, pc, policy=None, delivery=False):
     """Independent fields merge. Same-field changes and delete/edit conflicts need an explicit choice."""
     conflicts = []
     def merge(b, l, r, path):
+        if delivery and l is MISSING and isinstance(r, dict) and b is not MISSING and path.rsplit('/',2)[-2] in ENTITY_LISTS:
+            if policy is None: conflicts.append(path)
+            return MISSING if policy == 'device' else copy.deepcopy(r)
+        # "Invia al tablet" must not silently apply a tablet-only deletion or
+        # reorder back to the PC. An explicit choice is needed for set order.
+        if delivery and path.endswith('/items') and isinstance(l, list) and isinstance(r, list) and l != r and l != b:
+            if policy is None: conflicts.append(path)
+            return copy.deepcopy(l if policy == 'device' else r)
         if l == r: return copy.deepcopy(l) if l is not MISSING else MISSING
-        if l == b: return copy.deepcopy(r) if r is not MISSING else MISSING
-        if r == b: return copy.deepcopy(l) if l is not MISSING else MISSING
+        inspect_sets = delivery and ((isinstance(l, dict) and isinstance(r, dict)) or (isinstance(l, list) and isinstance(r, list) and path.split('/')[-1] in ENTITY_LISTS))
+        if not inspect_sets and l == b: return copy.deepcopy(r) if r is not MISSING else MISSING
+        if not inspect_sets and r == b: return copy.deepcopy(l) if l is not MISSING else MISSING
         if isinstance(l, dict) and isinstance(r, dict) and (isinstance(b, dict) or b is MISSING):
             old = b if isinstance(b, dict) else {}
             out = {}
@@ -132,10 +150,11 @@ class Library:
             c.execute('UPDATE state SET revision=?,data=? WHERE id=1', (rev+1, json.dumps(db, ensure_ascii=False)))
             c.execute('DELETE FROM history WHERE revision NOT IN (SELECT revision FROM history ORDER BY revision DESC LIMIT 40)')
             return {'revision': rev+1, 'db': db}
-    def sync(self, base, device, policy=None, expected_revision=None):
+    def sync(self, base, device, policy=None, expected_revision=None, delivery=False):
         validate_db(device)
         if base is not None: validate_db(base)
         if policy not in (None, 'device', 'pc'): raise ValueError('Scelta del conflitto non valida.')
+        if type(delivery) is not bool: raise ValueError('Tipo di trasferimento non valido.')
         with self.lock:
             current = self.get()
             if policy is not None and expected_revision != current['revision']:
@@ -143,7 +162,7 @@ class Library:
             # Only a verified, untouched initial database may be treated as the
             # first pairing baseline. A populated PC library still needs choices.
             baseline = current['db'] if base is None and current['revision'] == 1 and current['db'] == self.seed else base
-            merged, canonical, conflicts = merge_libraries(baseline, device, current['db'], policy)
+            merged, canonical, conflicts = merge_libraries(baseline, device, current['db'], policy, delivery)
             if conflicts and policy is None: return {'conflicts': conflicts, 'revision': current['revision']}, 409
             saved = self.save(canonical, current['revision'])
             return {'db': merged, 'revision': saved['revision'], 'conflicts': []}, 200

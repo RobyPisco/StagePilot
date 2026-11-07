@@ -14,8 +14,8 @@ android {
         // Android 10: il Fire HD 8 di prova Ã¨ LineageOS 17.1 (SDK 29)
         minSdk = 29
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.2.0"
         testInstrumentationRunner = "it.stagepilot.app.SmokeInstrumentation"
     }
 
@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
     val composeBom = platform("androidx.compose:compose-bom:2025.08.01")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")

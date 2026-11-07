@@ -1,6 +1,6 @@
 # StagePilot — punto di ripartenza
 
-Salvato il 7 novembre 2026. Versione Android 0.1.3, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
+Salvato il 7 novembre 2026. Versione Android 0.2.0, installata sul Fire HD 8; studio web locale disponibile da StagePilot.cmd.
 
 ## Stato completato
 
@@ -45,3 +45,19 @@ Nel primo invio osservato il nuovo brano era nel repertorio ma mancava la sua ul
 ## Identità StagePilot — icona 0.1.3
 
 Creata e integrata l’icona originale S azzurra con Play nello spazio negativo su fondo grafite. Master e prompt in branding/. Launcher Android adattivo, testata dell’app, logo web e favicon aggiornati; asset locali e PNG esportabile. Compilazioni Android e web riuscite; versione 0.1.3 installata sul Fire HD 8 e icona verificata nella testata dell’app. Asset web e favicon serviti con risposta HTTP 200. Nessuna modifica ai dati musicali o alla sincronizzazione in questo aggiornamento.
+
+
+## Versione 0.2.0 — Band Live, dossier e guida
+
+- Band Live Android autonomo, senza PC: un tablet espone la scaletta sulla Wi-Fi con codice temporaneo, gli altri seguono cambio brano, Play/Pausa/Stop e salti alle sezioni. Snapshot della sessione separato dalla libreria personale, lettura libera, cache offline e riconnessione. La sessione va tenuta aperta sul capofila.
+- Dossier concerto offline su Android e web: orari, indirizzo, contatti, checklist assegnate, schema palco e lista ingressi. Editor web con recupero bozza, merge per campo e stampa/PDF. Modifiche concorrenti non sovrascritte in silenzio.
+- Invio dal web protetto contro una cancellazione o un riordino presente solo sul tablet: richiede confronto prima di riscrivere il PC. Riprodotta e coperta dai test questa categoria di rischio; non è dimostrato che fosse l'esatta causa dell'episodio storico.
+- Guida pratica italiana inclusa nel menu Oggi Android, nella barra laterale web e in HTML/Markdown nel kit. Installazione, trasferimenti, importazione, palco, Band Live, dossier, backup e problemi comuni.
+
+Verifiche concluse: 70 test JVM Android, 37 Python, 12 web e 4 strumentati sul Fire HD 8. Browser: dossier salvato/riletto, orari, checklist, posizione con tastiera, ingresso mixer, recupero bozza dopo reload, guida e ancore. Tablet reale: stessa scheda concerto ricevuta via sync, orari/contatto/checklist/schema/ingresso verificati; guida HTML offline visualizzata. Capofila reale: cambio brano, Play, Parti subito e salto Ritornello rilevati da client Wi-Fi. Test nativi capofila/seguace con cache, perdita e ripristino del collegamento passati sullo stesso Fire.
+
+Resta da collaudare Band Live con due tablet fisici distinti in sala e da valutare leggibilità/click/pedale con la band. Non promette sincronizzazione audio o metronomo in fase.
+
+Libreria reale conservata: 5 brani, scalette Serata tipo (6 voci) e Acustico (1). Dossier compilato solo nel concerto esplicitamente dimostrativo, con indicazioni “da confermare” e nessun numero telefonico inventato. Sessione di collaudo Band Live terminata; tablet aggiornato e tornato a Oggi. Backup personale separato dal kit, escluso da Git.
+
+Consegna: StagePilot-0.2.0-kit.zip con APK debug, studio Windows precompilato, guida e avvisi dipendenze. Per una futura pubblicazione stabile preparare una firma release e conservarla. Repository ancora privato: nessuna pubblicazione pubblica effettuata.

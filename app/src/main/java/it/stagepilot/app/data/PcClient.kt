@@ -8,7 +8,7 @@ import java.net.URL
 import kotlinx.serialization.Serializable
 
 class SyncConflict(val paths: List<String>, val revision: Int) : Exception("Le stesse informazioni sono cambiate sul PC e sul tablet.")
-@Serializable private data class SyncRequest(val db: DB, val base: DB? = null, val policy: String? = null, val revision: Int? = null)
+@Serializable private data class SyncRequest(val db: DB, val base: DB? = null, val policy: String? = null, val revision: Int? = null, val delivery: Boolean = false)
 @Serializable private data class SyncResponse(val db: DB? = null, val conflicts: List<String> = emptyList(), val revision: Int = 0, val error: String = "")
 @Serializable private data class MetadataRequest(val body: String, val title: String, val artist: String)
 @Serializable data class MetadataSource(val label: String = "", val url: String = "")
@@ -54,11 +54,11 @@ object PcClient {
             } finally { c.disconnect() }
         }
     }
-    suspend fun sync(address: String, code: String, current: DB, base: String?, policy: String? = null, revision: Int? = null): DB = withContext(Dispatchers.IO) {
+    suspend fun sync(address: String, code: String, current: DB, base: String?, policy: String? = null, revision: Int? = null, delivery: Boolean = false): DB = withContext(Dispatchers.IO) {
         guard {
             val c = open(address, code, "/api/sync", post = true)
             try {
-                val request = SyncRequest(current, base?.let(::decodeBackup), policy, revision)
+                val request = SyncRequest(current, base?.let(::decodeBackup), policy, revision, delivery)
                 c.outputStream.use { it.write(AppJson.encodeToString(SyncRequest.serializer(), request).toByteArray(Charsets.UTF_8)) }
                 val status = c.responseCode
                 val text = (if (status < 400) c.inputStream else c.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()

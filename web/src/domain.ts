@@ -49,6 +49,27 @@ export type Gig = {
   setId: string;
   notes: string;
   kind: string;
+  address?: string;
+  arrival?: string;
+  soundcheck?: string;
+  doors?: string;
+  end?: string;
+  contacts?: { id: string; name: string; role: string; phone: string }[];
+  checklist?: { id: string; text: string; owner: string; done: boolean }[];
+  stagePlot?: {
+    id: string;
+    label: string;
+    instrument: string;
+    x: number;
+    y: number;
+  }[];
+  inputs?: {
+    id: string;
+    channel: string;
+    label: string;
+    mic: string;
+    notes: string;
+  }[];
 };
 export type Band = {
   id: string;

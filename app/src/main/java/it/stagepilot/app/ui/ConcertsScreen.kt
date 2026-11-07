@@ -21,6 +21,11 @@ import java.time.LocalDate
     val band = db.band
     var creating by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Gig?>(null) }
+    var dossierId by remember { mutableStateOf<String?>(null) }
+    dossierId?.let { id -> band.events.firstOrNull { it.id == id }?.let { gig ->
+        GigDossierScreen(gig, store) { dossierId = null }
+        return
+    } }
     Column(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding().verticalScroll(rememberScrollState()).padding(bottom = 25.dp)) {
         BrandBar(band.name, onSettings)
         LargeTitle("Ogni serata, preparata.", "Una data, una scaletta e quello che resta da fare.")
@@ -39,6 +44,7 @@ import java.time.LocalDate
                     if (p.missingDurations > 0) Text("• ${p.missingDurations} durate da completare", color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
                     if (gig.notes.isNotBlank()) Text(gig.notes, color = Palco.Ink, fontFamily = Sans, fontSize = 15.sp, modifier = Modifier.padding(top = 15.dp))
                     Row(Modifier.padding(top = 17.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        GhostButton("Dossier") { dossierId = gig.id }
                         GhostButton("Modifica") { editing = gig }
                         if (p.openPassages > 0 || p.pendingSongs > 0) GhostButton("Prepara in prova") {
                             if (set != null) store.updateBand { it.copy(cur = set.id) }
@@ -60,8 +66,9 @@ import java.time.LocalDate
         var notes by remember { mutableStateOf(old?.notes ?: "") }
         val valid = title.isNotBlank() && runCatching { LocalDate.parse(date) }.isSuccess && Regex("^([01]?[0-9]|2[0-3]):[0-5][0-9]$").matches(time)
         PalcoDialog(if (old == null) "Prepara una serata" else "La tua serata", "Salva", if (valid) ({
-            store.saveEvent(Gig(old?.id ?: store.newId("gig"), title.trim(), date, time, location = venue.trim(), setId = setId, notes = notes.trim()))
-            creating = false; editing = null
+            val next=(old ?: Gig(store.newId("gig"), "")).copy(title = title.trim(), date = date, time = time, location = venue.trim(), setId = setId, notes = notes.trim())
+            if(old==null) store.saveEvent(next)
+            if(old==null || store.saveEventDraft(old,next)) { creating = false; editing = null }
         }) else null, { creating = false; editing = null }) {
             Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PalcoField(title, { title = it }, "Nome della serata")

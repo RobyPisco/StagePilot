@@ -59,7 +59,13 @@ data class Song(
 )
 
 @Serializable
-data class Gig(val id: String, val title: String, val date: String = "", val time: String = "20:30", val kind: String = "gig", val location: String = "", val setId: String = "", val notes: String = "")
+data class Gig(val id: String, val title: String, val date: String = "", val time: String = "20:30", val kind: String = "gig", val location: String = "", val setId: String = "", val notes: String = "",
+    val address: String = "", val arrival: String = "", val soundcheck: String = "", val doors: String = "", val end: String = "",
+    val contacts: List<GigContact> = emptyList(), val checklist: List<GigCheck> = emptyList(), val stagePlot: List<StagePosition> = emptyList(), val inputs: List<GigInput> = emptyList())
+@Serializable data class GigContact(val id: String, val name: String = "", val role: String = "", val phone: String = "")
+@Serializable data class GigCheck(val id: String, val text: String = "", val owner: String = "", val done: Boolean = false)
+@Serializable data class StagePosition(val id: String, val label: String = "", val instrument: String = "", val x: Double = 50.0, val y: Double = 50.0)
+@Serializable data class GigInput(val id: String, val channel: String = "", val label: String = "", val mic: String = "", val notes: String = "")
 
 @Serializable
 data class Rehearsal(val id: String, val date: String, val seconds: Int, val songIds: List<String> = emptyList(), val notes: String = "")

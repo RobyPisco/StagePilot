@@ -88,7 +88,7 @@ def make_server(port=8765, data_dir=None):
                 if path=='/api/state': return self.reply(library.save(data['db'],data['revision']))
                 if path=='/api/undo': return self.reply(library.undo(data['revision']))
                 if path=='/api/sync':
-                    result,status=library.sync(data.get('base'),data['db'],data.get('policy'),data.get('revision'))
+                    result,status=library.sync(data.get('base'),data['db'],data.get('policy'),data.get('revision'),data.get('delivery',False))
                     return self.reply(result,status)
                 return self.reply({'error':'Funzione non trovata.'},404)
             except (ValueError,KeyError,TypeError,UnicodeDecodeError) as e: return self.reply({'error':str(e)},409 if 'cambiata' in str(e) else 400)

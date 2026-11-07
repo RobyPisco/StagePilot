@@ -12,6 +12,48 @@ def sample():
     return db
 
 class LibraryTests(unittest.TestCase):
+    def test_dossier_merges_independent_checklist_and_contact_changes(self):
+        base=sample();base['bands'][0]['events']=[{'id':'g1','title':'Serata'}]
+        phone=copy.deepcopy(base);pc=copy.deepcopy(base)
+        phone['bands'][0]['events'][0]['checklist']=[{'id':'c1','text':'Cavi','owner':'Basso','done':True}]
+        pc['bands'][0]['events'][0].update(address='Via esempio',contacts=[{'id':'p1','name':'Fonico','role':'Audio','phone':''}],stagePlot=[{'id':'s1','label':'Basso','instrument':'Basso','x':20,'y':80}],inputs=[{'id':'i1','channel':'1','label':'Basso','mic':'DI','notes':''}])
+        merged,_,conflicts=merge_libraries(base,phone,pc)
+        self.assertEqual([],conflicts)
+        gig=merged['bands'][0]['events'][0]
+        self.assertTrue(gig['checklist'][0]['done']);self.assertEqual('Fonico',gig['contacts'][0]['name'])
+        with tempfile.TemporaryDirectory() as tmp:
+            lib=Library(Path(tmp)/'dossier.sqlite',merged)
+            self.assertEqual(gig,lib.get()['db']['bands'][0]['events'][0])
+    def test_invalid_stage_positions_cannot_be_saved(self):
+        data=sample();data['bands'][0]['events']=[{'id':'g1','stagePlot':[{'id':'p1','x':120,'y':40}]}]
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError): Library(Path(tmp)/'invalid.sqlite',data)
+    def test_web_delivery_requires_confirmation_before_tablet_deletes_pc_song(self):
+        base=sample(); phone=copy.deepcopy(base)
+        phone['bands'][0]['songs']=[];phone['bands'][0]['sets'][0]['items']=[]
+        _,_,conflicts=merge_libraries(base,phone,base,delivery=True)
+        self.assertTrue(any('/songs/s1' in p for p in conflicts))
+        merged,_,_=merge_libraries(base,phone,base,'pc',delivery=True)
+        self.assertEqual('s1',merged['bands'][0]['songs'][0]['id'])
+        self.assertEqual(1,len(merged['bands'][0]['sets'][0]['items']))
+    def test_web_delivery_cannot_silently_remove_a_pc_set_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=sample(); device=copy.deepcopy(base)
+            device['bands'][0]['sets'][0]['items']=[]
+            lib=Library(Path(tmp)/'library.sqlite',base)
+            result,status=lib.sync(base,device,delivery=True)
+            self.assertEqual(409,status)
+            self.assertTrue(any(p.endswith('/items') for p in result['conflicts']))
+            self.assertEqual(1,len(lib.get()['db']['bands'][0]['sets'][0]['items']))
+            result,status=lib.sync(base,device,'pc',result['revision'],delivery=True)
+            self.assertEqual(200,status)
+            self.assertEqual(1,len(result['db']['bands'][0]['sets'][0]['items']))
+    def test_web_delivery_accepts_pc_only_append_without_a_conflict(self):
+        base=sample(); device=copy.deepcopy(base); pc=copy.deepcopy(base)
+        pc['bands'][0]['sets'][0]['items'].append({'type':'mark','label':'Encore','dur':'0:30'})
+        result,_,conflicts=merge_libraries(base,device,pc,delivery=True)
+        self.assertEqual([],conflicts)
+        self.assertEqual(2,len(result['bands'][0]['sets'][0]['items']))
     def test_web_song_and_set_append_survive_repeated_android_round_trips(self):
         base=sample(); device=copy.deepcopy(base); pc=copy.deepcopy(base)
         for item in base['bands'][0]['sets'][0]['items']:
