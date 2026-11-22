@@ -521,6 +521,17 @@ function App() {
                     band={band}
                     edit={setEdit}
                     onImport={() => setPage("import")}
+                    onDelete={(s) => {
+                      if (
+                        confirm(
+                          `Eliminare "${s.title}" dal repertorio e da tutte le scalette?`,
+                        )
+                      )
+                        void commit(
+                          (_, b) => removeSong(b, s.id),
+                          "Brano eliminato. Puoi recuperarlo con Annulla.",
+                        );
+                    }}
                   />
                 )}
                 {page === "sets" && (
@@ -764,7 +775,15 @@ function App() {
   );
 }
 
-function SongRow({ song, open }: { song: Song; open: (s: Song) => void }) {
+function SongRow({
+  song,
+  open,
+  onDelete,
+}: {
+  song: Song;
+  open: (s: Song) => void;
+  onDelete?: (s: Song) => void;
+}) {
   return (
     <div className="sp-songrow">
       <button className="sp-song-open" onClick={() => open(song)}>
@@ -785,6 +804,16 @@ function SongRow({ song, open }: { song: Song; open: (s: Song) => void }) {
       </span>
       <span className="sp-key">{song.key || "—"}</span>
       <span className="sp-songmeta">{song.dur || "—"}</span>
+      {onDelete && (
+        <button
+          className="sp-iconbtn"
+          title="Elimina brano"
+          aria-label={`Elimina ${song.title}`}
+          onClick={() => onDelete(song)}
+        >
+          <Trash2 />
+        </button>
+      )}
     </div>
   );
 }
@@ -900,10 +929,12 @@ function Repertoire({
   band,
   edit,
   onImport,
+  onDelete,
 }: {
   band: Band;
   edit: (s: Song) => void;
   onImport: () => void;
+  onDelete: (s: Song) => void;
 }) {
   const [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all");
@@ -955,7 +986,7 @@ function Repertoire({
         <span>TONALITÀ · DURATA</span>
       </div>
       {shown.map((s) => (
-        <SongRow key={s.id} song={s} open={edit} />
+        <SongRow key={s.id} song={s} open={edit} onDelete={onDelete} />
       ))}
       {!shown.length && <div className="sp-empty">Nessun brano trovato.</div>}
       <div className="sp-end-actions">
