@@ -4,8 +4,8 @@ import { tabToChordPro, looksRawTab } from '../core/convert';
 import { setAsText, moveItem } from '../core/setlist';
 import { t, setLang, pickLang } from '../i18n';
 import { $, $in, flashBtn, applyI18n } from './dom';
-import { S, live, save, saveSoon, applyTheme, curBand, curSet, setItems, byId, entries, liveEntry, keyLabel } from './state';
-import { drawSet, drawLib, drawBands, drawOpts, redrawAll, printSetlist, showView } from './views';
+import { S, live, save, saveSoon, applyTheme, curBand, curSet, setItems, byId, entries, liveEntry, keyLabel, type ViewName } from './state';
+import { drawHome, drawSet, drawLib, drawPrac, drawGigs, drawBands, drawOpts, redrawAll, printSetlist, showView } from './views';
 import { openLive, closeLive, takeWake, paint, drawBar, drawTimer, measure, setPlay, liveOn, openJump, closeJump, drawJump, jumpToSong, scrollHalfPage } from './live';
 import { openEdit, editDirty, drawSetChips, drawRoles, applySetChips, toggleEditorPreview, tapBpm } from './editor';
 import { exportBand, importFile, syncPush, syncPull, wipeAll } from './data';
@@ -31,8 +31,60 @@ async function onClick(e: MouseEvent): Promise<void> {
   const d = b.dataset;
 
   if (b.classList.contains('tab')) {
-    showView(d.v as 'set' | 'lib' | 'opts');
+    showView(d.v as ViewName);
     return;
+  }
+
+  // oggi, guida, prove, concerti
+  if (d.hact === 'go' && setItems().length) return openLive(0);
+  if (d.hact === 'new') return openEdit(null);
+  if (d.hact === 'prac') { showView('prac'); return; }
+  if (d.hact === 'guide' || b.id === 'oguide') { $('#guide').classList.add('on'); return; }
+  if (b.id === 'gclose') { $('#guide').classList.remove('on'); return; }
+  if (b.id === 'pnew') {
+    const bnd = curBand();
+    if (!bnd.songs.length) { showView('lib'); return openEdit(null); }
+    const goal = ((await uiPrompt(t('prac.promptGoal'))) || '').trim();
+    if (!goal) return;
+    bnd.practiceTasks.push({
+      id: 'p' + Date.now(), songId: bnd.songs[0].id,
+      section: 'Brano intero', goal, role: bnd.me, done: false
+    });
+    await save(); drawPrac(); drawHome(); return;
+  }
+  if (d.ptog) {
+    const p = curBand().practiceTasks.find(x => x.id === d.ptog);
+    if (p) { p.done = !p.done; await save(); drawPrac(); drawHome(); }
+    return;
+  }
+  if (d.pdel) {
+    curBand().practiceTasks = curBand().practiceTasks.filter(x => x.id !== d.pdel);
+    await save(); drawPrac(); drawHome(); return;
+  }
+  if (d.pgo) {
+    const idx = entries().findIndex(x => x.type === 'song' && x.song.id === d.pgo);
+    if (idx >= 0) return openLive(idx);
+    live.offSong = d.pgo;
+    return openLive(0);
+  }
+  if (b.id === 'gnew') {
+    const title = ((await uiPrompt(t('gigs.promptTitle'))) || '').trim();
+    if (!title) return;
+    const today = new Date().toISOString().slice(0, 10);
+    curBand().events.push({
+      id: 'g' + Date.now(), title, date: today, time: '21:00',
+      location: '', setId: curSet().id, notes: ''
+    });
+    await save(); drawGigs(); drawHome(); return;
+  }
+  if (d.gplay) {
+    if (d.gplay && curBand().sets.some(s => s.id === d.gplay)) curBand().cur = d.gplay;
+    if (setItems().length) return openLive(0);
+    showView('set'); return;
+  }
+  if (d.gdel) {
+    curBand().events = curBand().events.filter(x => x.id !== d.gdel);
+    await save(); drawGigs(); drawHome(); return;
   }
 
   // tema rapido

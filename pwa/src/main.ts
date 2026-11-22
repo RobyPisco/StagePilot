@@ -15,7 +15,7 @@ import { setLang, pickLang } from './i18n';
 import { askPersist } from './storage/store';
 import { applyI18n } from './ui/dom';
 import { S, store, save, applyTheme } from './ui/state';
-import { drawSet, drawLib } from './ui/views';
+import { drawHome, drawSet, drawLib, drawPrac, drawGigs } from './ui/views';
 import { bindEvents } from './ui/events';
 import { initUpdates } from './ui/update';
 import { LANGKEY, lsGet } from './ui/prefs';
@@ -29,7 +29,7 @@ async function boot(): Promise<void> {
   /* Se i dati arrivavano dal localStorage di prima, questo li porta in
      IndexedDB subito, invece di aspettare la prima modifica. */
   if (raw) await save();
-  drawSet(); drawLib();
+  drawHome(); drawSet(); drawLib(); drawPrac(); drawGigs();
   bindEvents();
   void askPersist();
   void initUpdates();

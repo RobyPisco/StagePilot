@@ -9,9 +9,11 @@ import { syncStatusBar } from './native';
 /* Lo stato condiviso fra i moduli dell'interfaccia. Un oggetto solo e non
    tante `let` sparse: un modulo ES non può riassegnare una variabile
    importata, ma può cambiare un campo di un oggetto importato. */
+export type ViewName = 'home' | 'lib' | 'set' | 'prac' | 'gigs' | 'opts';
+
 export const S = {
   db: null as unknown as DB,
-  view: 'set' as 'set' | 'lib' | 'opts',
+  view: 'home' as ViewName,
   libQ: '',
   libTag: '',
   /* editor */

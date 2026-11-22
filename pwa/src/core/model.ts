@@ -22,6 +22,24 @@ export interface Song {
   scroll: number;
   lead: number;
   body?: string;
+  status?: 'study' | 'rehearse' | 'ready';
+}
+export interface Gig {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  setId: string;
+  notes: string;
+}
+export interface PracticeTask {
+  id: string;
+  songId: string;
+  section: string;
+  goal: string;
+  role: string;
+  done: boolean;
 }
 export type SetItem =
   | { type: 'song'; id: string }
@@ -34,6 +52,8 @@ export interface Band {
   songs: Song[];
   sets: SetList[];
   cur: string;
+  events: Gig[];
+  practiceTasks: PracticeTask[];
 }
 export const SORTS = ['add', 'title', 'artist', 'key', 'bpm'] as const;
 export type Sort = typeof SORTS[number];
@@ -106,13 +126,36 @@ export function migrateBand(raw: any, i?: number): Band {
     sets = [{ id: 'set1', name: t('set.default'),
               items: (Array.isArray(raw.set) ? raw.set : []).filter(known).map((id: string) => ({ type: 'song', id })) }];
   }
+  const events: Gig[] = (Array.isArray(raw.events) ? raw.events : [])
+    .filter((g: any) => g && g.id && g.title)
+    .map((g: any) => ({
+      id: String(g.id),
+      title: String(g.title),
+      date: String(g.date || ''),
+      time: String(g.time || '20:30'),
+      location: String(g.location || ''),
+      setId: String(g.setId || ''),
+      notes: String(g.notes || '')
+    }));
+  const practiceTasks: PracticeTask[] = (Array.isArray(raw.practiceTasks) ? raw.practiceTasks : [])
+    .filter((p: any) => p && p.id && p.goal && known(p.songId))
+    .map((p: any) => ({
+      id: String(p.id),
+      songId: String(p.songId),
+      section: String(p.section || 'Brano intero'),
+      goal: String(p.goal),
+      role: String(p.role || 'Tutti'),
+      done: p.done === true
+    }));
   return {
     id: raw.id || 'b' + Date.now() + (i || 0),
     name: raw.name || raw.band || t('band.defaultN', { n: (i || 0) + 1 }),
     me: isRole(raw.me) ? raw.me : 'Tutti',
     songs,
     sets,
-    cur: sets.some(s => s.id === raw.cur) ? raw.cur : sets[0].id
+    cur: sets.some(s => s.id === raw.cur) ? raw.cur : sets[0].id,
+    events,
+    practiceTasks
   };
 }
 

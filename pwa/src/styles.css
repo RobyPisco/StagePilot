@@ -59,19 +59,41 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .gear{padding:13px 14px 13px 10px;font-size:18px;color:var(--dim);line-height:1}
 .gear:hover{color:var(--ink)}
 
-/* ---------- barra inferiore ---------- */
+/* ---------- barra inferiore (6 schede) ---------- */
 .bnav{
-  display:grid;grid-template-columns:repeat(3,1fr);flex:0 0 auto;
+  display:grid;grid-template-columns:repeat(6,1fr);flex:0 0 auto;
   background:var(--panel);border-top:1px solid var(--line);
 }
 .tab{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  padding:9px 6px 8px;font-size:11px;font-weight:700;letter-spacing:.12em;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:8px 2px 7px;font-size:10px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--dim);border-top:2px solid transparent;
+  min-width:0;white-space:nowrap;
 }
 .tab .bico{width:20px;height:20px}
 .tab[aria-selected="true"]{color:var(--amber);border-top-color:var(--amber)}
 .tab:active{background:var(--raise)}
+
+/* ---------- vista oggi & guida ---------- */
+.hhero{max-width:720px;margin:0 auto;padding:16px 16px 28px;display:flex;flex-direction:column;gap:14px}
+.htoprow{display:flex;gap:10px}
+.htoprow .btn{flex:1;padding:11px}
+.hlead{font-size:30px;font-weight:700;line-height:1.12;letter-spacing:-.01em;margin-top:4px}
+.hsub{font-size:14px;color:var(--dim);margin-top:-8px}
+.hcard{background:var(--act-bg);border:1px solid var(--act-line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.hlbl{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.httl{font-size:26px;font-weight:700;line-height:1.15}
+.hmeta{font-family:var(--mono);font-size:13px;color:var(--dim);margin-bottom:6px}
+.hgo{width:100%;padding:14px;font-size:15px;border-radius:10px}
+.hstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:6px 2px}
+.hstat b{display:block;font-size:24px;font-weight:700}
+.hstat span{font-size:12px;color:var(--dim)}
+.hprac{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+}
+.hprac:hover{border-color:var(--dim)}
+.gframe{flex:1;width:100%;border:0;background:var(--pitch)}
 @media (max-width:440px){
   .brand{display:none}
   .bandbtn{padding-left:14px}
@@ -296,8 +318,8 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .val{font-family:var(--mono);font-size:14px;color:var(--amber);min-width:3.4em;text-align:center}
 
 /* ---------- pannelli ---------- */
-#edit,#bands,#ug,#lpick{display:none;position:fixed;inset:0;background:var(--pitch);flex-direction:column;z-index:30}
-#edit.on,#bands.on,#ug.on,#lpick.on{display:flex}
+#edit,#bands,#ug,#lpick,#guide{display:none;position:fixed;inset:0;background:var(--pitch);flex-direction:column;z-index:30}
+#edit.on,#bands.on,#ug.on,#lpick.on,#guide.on{display:flex}
 .picklist{flex:1;overflow-y:auto;overscroll-behavior:contain}
 .form{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
 .form.flush{padding:0}
