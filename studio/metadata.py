@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 
 UA = 'StagePilot/0.1 (https://github.com/RobyPisco/StagePilot)'
-STOP = set(('a an the and or but of to in on at for with from by as is are was were be been am it its i you he she we they me my your his her our their this that not no so do does did have has had just oh yeah uh huh la na ooh e il la lo le gli di da in con su per tra fra un una che non mi ti ci si ma o').split())
+STOP = set(('a an the and or but of to in on at for with from by as is are was were be been am it its i you he she we they me my your his her our their this that not no so do does did have has had just oh yeah uh huh la na fa ooh hey e il la lo le gli di da in con su per tra fra un una che non mi ti ci si ma o').split())
 
 
 def words(text):
@@ -86,12 +86,16 @@ def title_queries(lines):
     counts, endings = Counter(), Counter()
     for line in lines:
         w = words(line)
+        seen = set()
         for size in range(2, 7):
             for start in range(len(w) - size + 1):
                 phrase = w[start:start + size]
-                if all(p in STOP for p in phrase):
+                if len(set(phrase)) < 2 or all(p in STOP for p in phrase):
                     continue
                 key = ' '.join(phrase)
+                if key in seen:
+                    continue
+                seen.add(key)
                 counts[key] += 1
                 if start + size == len(w): endings[key] += 1
     ranked = sorted((p for p in counts if counts[p] >= 2), key=lambda p: -(counts[p] * min(len(p.split()), 4) * (1 + .6 * endings[p] / counts[p]) * (.7 if len(p.split()) > 4 else 1)))
