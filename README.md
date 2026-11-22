@@ -4,7 +4,15 @@
 
 [![Licenza MIT](https://img.shields.io/badge/licenza-MIT-7fb7ff)](LICENSE) [![Windows x64](https://img.shields.io/badge/Windows-10%2F11%20x64-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1) [![Android](https://img.shields.io/badge/Android-10%2B-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1)
 
-**Prepara sul PC, prova con un obiettivo, suona dal tablet.** Android nativo e studio web locale, con librerie SQLite autonome e sincronizzazione esplicita. Tema grafite e azzurro, app separata da Backline (`it.stagepilot.app`).
+**Prepara sul PC, prova con un obiettivo, suona dal tablet.**  
+*Prepare on PC, rehearse with a goal, perform on tablet.*
+
+> **English summary:** StagePilot is a free, open-source app for bands and gigging musicians — lyrics & chords (C D E and Do Re Mi / solfège), setlists, guided rehearsals, gig dossiers (schedule, stage plot, mixer input list), standalone Windows/web studio, offline Android tablet stage reader, and PC-free Wi-Fi **Band Live** sync between tablets. Supports **Stage (dark)** and **Day (light)** themes, **A4 stage setlist PDF export**, **Bluetooth page-turner pedals**, **TAP tempo**, and **5 UI languages** (IT, EN, ES, FR, PT).  
+> **[Download v0.2.1 Beta (Windows EXE & Android APK)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1)**
+
+---
+
+Android nativo e studio web locale, con librerie SQLite autonome e sincronizzazione esplicita. Tema grafite e azzurro (più tema Giorno ad alto contrasto), app separata da Backline (`it.stagepilot.app`).
 
 ## Funzioni della versione 0.2.1
 
