@@ -11,13 +11,13 @@
 - **Importazione automatica:** incolla testo e accordi da Ultimate Guitar, oppure apri un file ChordPro/testo. La pulizia legge i metadati già presenti; il riconoscimento confronta le frasi con LRCLIB e propone titolo/artista, durata e BPM della registrazione Deezer. Mostra album, fonti e alternative, senza modificare le parole, gli accordi o le correzioni manuali. Se il catalogo non ha il BPM, lo dichiara e lascia il campo modificabile. Il web conserva la bozza nella scheda del browser anche dopo un ricaricamento. Su Android il riconoscimento online usa lo studio PC collegato nelle impostazioni; importazione e lettura restano disponibili offline.
 - **Editor brano sul PC:** testo e anteprima affiancati, accordi agganciati alle sillabe, inserimento e spostamento con un clic, sezioni riordinabili, modalità ChordPro e trasposizione dell’arrangiamento. Annulla/ripristina, recupero della bozza nella scheda e protezione dalle modifiche concorrenti.
 - **Repertorio:** creazione, modifica, ricerca, tag, BPM, tonalità, durata, note condivise e per ruolo, stato di preparazione e appunto di prova.
-- **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come file o elenco su Android.
+- **Scalette:** più scalette per gruppo, duplicazione, riordino, pause e cambi strumento, somma delle durate e condivisione come **File StagePilot**, **PDF da palco (A4)** a caratteri giganti o **Solo elenco (testo)** su Android.
 - **Prova guidata:** agenda di passaggi specifici, scelta della sezione del brano, obiettivo, ruolo responsabile, decisioni condivise, stato da risolvere/risolto e filtro personale. Apertura del solo passaggio nel lettore, senza modificare il chart originale. Sessioni cronometrate con riepilogo nel registro.
 - **Band Live senza PC:** un tablet Android apre la sessione sulla Wi-Fi e gli altri entrano con indirizzo e codice. Condivide scaletta, cambio brano, Play/Pausa/Stop e salto alle sezioni. Ogni musicista mantiene lettura e trasposizione personali, può passare in lettura libera e riaprire l’ultima copia offline. Il capofila mantiene StagePilot aperto; non è sincronizzazione audio.
 - **Dossier concerto:** orari di arrivo, soundcheck, porte e fine, indirizzo, contatti, checklist con responsabili, schema del palco e lista ingressi del mixer. Modifica su web e Android, stampa/PDF dal browser, dati offline su tablet.
-- **Guida integrata:** Oggi → Guida e aiuto su Android; Guida e aiuto nella barra laterale web. Manuale sorgente in [docs/GUIDA.md](docs/GUIDA.md).
+- **Guida integrata e Opzioni:** scheda **Opzioni** sempre visibile nella barra inferiore su Android (con **Guida interna e aiuto** in evidenza, tema **Palco / Giorno** ad alto contrasto per esterni, e **5 lingue**: italiano, inglese, spagnolo, francese, portoghese). Manuale sorgente in [docs/GUIDA.md](docs/GUIDA.md).
 - **Concerti:** data, orario, luogo, scaletta e appunti. Controlli sui brani ancora da preparare, sui passaggi aperti e sulle durate mancanti. Accesso alla prova filtrata per la scaletta della serata.
-- **Palco Android:** Play avvia lo scorrimento del testo; l’attesa iniziale del brano mostra un conto alla rovescia e si può saltare con **Parti subito**. Se tutto il brano entra nello schermo viene indicato. Schermo acceso, trasposizione, notazione inglese/italiana, scorrimento, solo testo/struttura, note per ruolo, capotasto, blocco del chart, prossimo brano e metronomo. Regia del set con salto diretto ai brani, tempo rimanente stimato e richiesta fuori scaletta dal repertorio. Supporto ai tasti di girapagine Bluetooth.
+- **Palco ed editor Android:** Play avvia lo scorrimento del testo; l’attesa iniziale del brano mostra un conto alla rovescia e si può saltare con **Parti subito**. Se tutto il brano entra nello schermo viene indicato. Schermo acceso, trasposizione, notazione inglese/italiana, scorrimento, testo in maiuscolo, solo testo/struttura, note per ruolo, capotasto, blocco del chart, prossimo brano e metronomo. Regia del set con salto diretto ai brani, tempo rimanente stimato e richiesta fuori scaletta dal repertorio. Supporto ai tasti di girapagine Bluetooth configurabile (*Brano prec/succ* o *Scorri pagina*). Nell’editor Android: **TAP tempo** per i BPM, **Anteprima** immediata del chart e conferma prima di uscire con modifiche non salvate.
 - **Dati:** SQLite sul PC e sul tablet, backup JSON compatibili con Backline, copie locali Android, cronologia del PC con annullamento. La sincronizzazione unisce campi indipendenti, chiede una scelta per i conflitti e rifiuta conferme riferite a revisioni superate. Le preferenze personali di lettura non vengono imposte agli altri dispositivi.
 
 ## Scarica e inizia
@@ -27,7 +27,7 @@
 Questa prima distribuzione è una **beta**. Nella pagina Releases trovi:
 
 - **StagePilot-Studio-0.2.1-Windows-x64.exe**: studio web completo, con Python incluso. Windows 10/11 a 64 bit, nessuna installazione richiesta. Avvialo: si apre nel browser. Lascia aperta la sua finestra mentre lavori; chiudila per terminare.
-- **StagePilot-0.2.0-debug.apk**: app Android di prova, Android 10 o successivo. Installazione manuale e aggiornamenti con la stessa firma; esporta un backup prima di aggiornare.
+- **StagePilot-0.2.1-debug.apk**: app Android 0.2.1 (Android 10 o successivo). Installazione manuale e aggiornamenti con la stessa firma; esporta un backup prima di aggiornare.
 - **StagePilot-0.2.1-Windows-x64.zip**: EXE, guida offline e avvisi delle dipendenze in un unico archivio.
 
 L’EXE attuale non ha una firma digitale del produttore: Windows potrebbe segnalarlo come applicazione non riconosciuta. Scarica i file solo dalle Releases di questo repository. L’APK è ancora una build debug: non è una pubblicazione sul Play Store.
@@ -53,8 +53,12 @@ Band Live usa invece **Oggi → Band Live**: il capofila apre una sessione e gli
 
 ![Studio web con orari e preparazione del concerto](docs/screenshots/studio-concerto.png)
 
-### Android: palco e dossier offline
+### Android: Oggi, Opzioni, palco e dossier offline
 
+<p>
+  <img src="docs/screenshots/android-oggi.png" alt="Schermata Oggi Android con barra inferiore a 6 schede" width="330">
+  <img src="docs/screenshots/android-opzioni.png" alt="Opzioni Android: 5 lingue, tema Palco/Giorno, notazione e pedale" width="330">
+</p>
 <p>
   <img src="docs/screenshots/android-palco.png" alt="Lettore da palco Android con accordi e Band Live" width="330">
   <img src="docs/screenshots/android-dossier.png" alt="Dossier Android con orari, contatti e checklist" width="330">
