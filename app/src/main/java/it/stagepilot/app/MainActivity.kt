@@ -482,6 +482,7 @@ private fun App(
                     db = db,
                     store = store,
                     onClose = { tab = 0 },
+                    onGuide = { route = "guide" },
                     onExport = {
                         val stamp = SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(Date())
                         exportLauncher.launch("backline-backup-$stamp.json")

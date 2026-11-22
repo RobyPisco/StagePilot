@@ -92,12 +92,12 @@ fun BrandBar(bandName: String, onClick: () -> Unit) {
         Spacer(Modifier.weight(1f))
         Row(
             Modifier.clip(CircleShape).background(Palco.Raise).clickable(onClick = onClick)
-                .padding(start = 14.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+                .padding(start = 14.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(bandName, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Spacer(Modifier.width(6.dp))
-            Icon(Ic.Sliders, "Impostazioni", tint = Palco.Dim, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Icon(Ic.Sliders, "Opzioni", tint = Palco.Amber, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -111,20 +111,27 @@ fun LargeTitle(text: String, sub: String? = null) {
     }
 }
 
-/** La barra in basso con le tre sezioni: Scaletta, Repertorio, Impostazioni. */
+/** La barra in basso con le sei sezioni: Oggi, Brani, Scalette, Prove, Concerti, Opzioni. */
 @Composable
 fun TabBar(selected: Int, onSelect: (Int) -> Unit) {
     Column(Modifier.fillMaxWidth().background(Palco.Panel).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
         Row(Modifier.fillMaxWidth()) {
-            listOf(Ic.Home to "Oggi", Ic.Note to "Brani", Ic.Struct to "Scalette", Ic.Practice to "Prove", Ic.Calendar to "Concerti").forEachIndexed { i, (icon, label) ->
+            listOf(
+                Ic.Home to "Oggi",
+                Ic.Note to "Brani",
+                Ic.Struct to "Scalette",
+                Ic.Practice to "Prove",
+                Ic.Calendar to "Concerti",
+                Ic.Sliders to "Opzioni",
+            ).forEachIndexed { i, (icon, label) ->
                 val c = if (i == selected) Palco.Amber else Palco.Dim
                 Column(
                     Modifier.weight(1f).clickable { onSelect(i) }.padding(top = 8.dp, bottom = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Icon(icon, label, tint = c, modifier = Modifier.size(24.dp))
-                    Text(label, color = c, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                    Icon(icon, label, tint = c, modifier = Modifier.size(23.dp))
+                    Text(label, color = c, fontFamily = Sans, fontWeight = FontWeight.Medium, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
                 }
             }
         }

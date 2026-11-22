@@ -94,6 +94,8 @@ Se la libreria cambia mentre stai modificando, il primo salvataggio può chieder
 
 In Scalette scegli una serata o creane una nuova. Aggiungi i brani dal repertorio e riordinali con i comandi disponibili; sul web puoi anche trascinarli. Puoi inserire pause o cambi di strumento con una durata.
 
+Su Android, il tasto Condividi nella scaletta offre tre formati: File StagePilot (con brani e accordi pronti da importare sugli altri tablet), PDF da palco (A4) a caratteri giganti pronto da stampare e fissare sul palco, oppure Solo elenco (testo).
+
 Il tempo totale usa le durate inserite, comprese le pause. Correggi le durate se la tua versione è più corta o più lunga della registrazione. Un brano nel repertorio non entra automaticamente in tutte le scalette: aggiungilo a quella che vuoi suonare.
 
 Prima del concerto verifica il nome della scaletta e l'ordine completo, quindi trasferisci gli aggiornamenti ai dispositivi interessati.
@@ -111,7 +113,17 @@ Apri Vai sul palco o un brano della scaletta. Il lettore usa i dati salvati sul 
 - Sezioni salta a una sezione nominata del chart, ad esempio Strofa o Ritornello.
 - Blocca protegge il chart dai tocchi accidentali. I comandi restano disponibili.
 
-Il metronomo è un click separato: quando abilitato nelle impostazioni, si attiva dall'indicatore del battito nel lettore. Prova click, scorrimento ed eventuale girapagine Bluetooth prima della serata.
+Il metronomo è un click separato: quando abilitato nelle Opzioni, si attiva dall'indicatore del battito nel lettore. Prova click, scorrimento ed eventuale girapagine Bluetooth prima della serata.
+
+## Opzioni, tema e personalizzazione (Android)
+
+La scheda Opzioni è sempre accessibile dalla barra inferiore (e dal nome del gruppo in alto) e raccoglie:
+
+- **Guida interna e aiuto:** questo manuale offline, sempre consultabile senza rete.
+- **Tema Palco / Giorno:** Palco (scuro) per il buio, Giorno (chiaro ad alto contrasto) per concerti all'aperto o sale molto illuminate.
+- **Notazione e lettura:** scelta tra C D E e Do Re Mi, alterazioni automatiche dalla tonalità, dimensione testo, testo in maiuscolo (solo cantato), solo fondamentali per il basso e solo testo per chi canta.
+- **Pedale Bluetooth / tastiera:** configurabile per cambiare brano (Brano prec / succ) oppure scorrere di mezza pagina (Scorri pagina) con le frecce destra/sinistra e PagSu/PagGiù. Le frecce su/giù scorrono sempre di mezza pagina.
+- **Editor su Android:** include TAP tempo per ricavare i BPM battendo il tempo, Anteprima immediata del chart formattato e avviso in caso di uscita con modifiche non salvate.
 
 ## Band Live senza PC
 

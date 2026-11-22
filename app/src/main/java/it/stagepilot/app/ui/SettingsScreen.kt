@@ -43,7 +43,7 @@ import it.stagepilot.app.data.Store
    sul palco sta qui, fuori dalla strada. */
 @Composable
 fun SettingsScreen(
-    db: DB, store: Store, onClose: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
+    db: DB, store: Store, onClose: () -> Unit, onGuide: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
     pcAddr: String, pcCode: String, pcStatus: String, pcBusy: Boolean,
     onPcSave: (String, String) -> Unit, onPcFetch: () -> Unit,
 ) {
@@ -64,11 +64,24 @@ fun SettingsScreen(
 
     Box(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
-            LargeTitle("Impostazioni", "Gruppo, scalette, lettura e backup")
+            LargeTitle("Opzioni", "Gruppo, scalette, lettura, guida e backup")
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // ── guida interna ──
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Palco.AmberDeep)
+                        .clickable(onClick = onGuide).padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Guida interna e aiuto", color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text("Spiega tutte le funzioni: palco, pedale, PDF, Band Live, dossier e backup.", color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    Icon(Ic.Chevron, "Apri guida", tint = Palco.Amber, modifier = Modifier.size(18.dp))
+                }
+
                 // ── gruppo ──
                 Section("Gruppo")
                 if (db.bands.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
