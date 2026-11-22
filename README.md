@@ -2,7 +2,7 @@
 
 <img src="web/public/stagepilot-icon.png" alt="StagePilot" width="96">
 
-[![Licenza MIT](https://img.shields.io/badge/licenza-MIT-7fb7ff)](LICENSE) [![Windows x64](https://img.shields.io/badge/Windows-10%2F11%20x64-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1) [![Android](https://img.shields.io/badge/Android-10%2B-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1)
+[![Licenza MIT](https://img.shields.io/badge/licenza-MIT-7fb7ff)](LICENSE) [![Windows x64](https://img.shields.io/badge/Windows-10%2F11%20x64-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1) [![Android](https://img.shields.io/badge/Android-10%2B-7fb7ff)](https://github.com/RobyPisco/StagePilot/releases/tag/v0.2.1-beta.1) [![iPad / iPhone PWA](https://img.shields.io/badge/iPad%20%2F%20iPhone-PWA%20offline-7fb7ff)](https://robypisco.github.io/StagePilot/)
 
 **Prepara sul PC, prova con un obiettivo, suona dal tablet.**  
 *Prepare on PC, rehearse with a goal, perform on tablet.*
@@ -37,6 +37,7 @@ Questa prima distribuzione è una **beta**. Nella pagina Releases trovi:
 - **StagePilot-Studio-0.2.1-Windows-x64.exe**: studio web completo, con Python incluso. Windows 10/11 a 64 bit, nessuna installazione richiesta. Avvialo: si apre nel browser. Lascia aperta la sua finestra mentre lavori; chiudila per terminare.
 - **StagePilot-0.2.1-debug.apk**: app Android 0.2.1 (Android 10 o successivo). Installazione manuale e aggiornamenti con la stessa firma; esporta un backup prima di aggiornare.
 - **StagePilot-0.2.1-Windows-x64.zip**: EXE, guida offline e avvisi delle dipendenze in un unico archivio.
+- **iPad / iPhone (gratis, 0 €, senza App Store):** apri **[robypisco.github.io/StagePilot](https://robypisco.github.io/StagePilot/)** in Safari → tocca **Condividi** → **Aggiungi a schermata Home**. Funziona a schermo intero, **100% offline**, non scade mai, supporta schermo sempre acceso, pedale Bluetooth, metronomo, tema Palco/Giorno, stampa scaletta A4 e **import/export backup JSON compatibile al 100%** con StagePilot Android e Studio Windows.
 
 L’EXE attuale non ha una firma digitale del produttore: Windows potrebbe segnalarlo come applicazione non riconosciuta. Scarica i file solo dalle Releases di questo repository. L’APK è ancora una build debug: non è una pubblicazione sul Play Store.
 

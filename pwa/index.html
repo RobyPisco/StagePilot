@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StagePilot</title>
+<meta name="description" content="Repertorio, scalette e chord chart per il palco — offline su iPad, iPhone e browser.">
+<meta name="theme-color" content="#101114">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="StagePilot">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-512.png">
+<script type="module" src="./src/main.ts"></script>
+</head>
+<body>
+<!-- I testi dell'interfaccia stanno nei dizionari (src/i18n): qui ci sono
+     solo le chiavi. data-i18n → testo, data-i18n-html → testo con markup,
+     data-i18n-title / -placeholder / -aria → l'attributo omonimo. -->
+
+<div class="bar">
+  <div class="brand">StagePilot</div>
+  <button class="bandbtn" id="bandbtn"><span id="bandnm">—</span> <span class="car">&#9662;</span></button>
+  <button class="gear push" id="themebtn" data-i18n-title="live.themeToggle">&#9680;</button>
+</div>
+
+<!-- SCALETTA -->
+<div class="view on" id="v-set">
+  <div class="tools tight">
+    <select id="setsel" data-i18n-aria="set.active"></select>
+    <button class="btn ico" id="snew" data-i18n-title="set.new">&plus;</button>
+    <button class="btn ico" id="sren" data-i18n-title="set.rename">&#9998;</button>
+    <button class="btn ico" id="sdup" data-i18n-title="set.dup">&#10697;</button>
+    <button class="btn ico" id="scopy" data-i18n-title="set.copy">&#128203;</button>
+    <button class="btn ico" id="sprint" data-i18n-title="set.print">&#9113;</button>
+    <button class="btn ico" id="sdel" data-i18n-title="set.del">&#10005;</button>
+  </div>
+  <div class="tools">
+    <button class="btn key" id="go" data-i18n="set.go"></button>
+    <button class="btn" id="smark" data-i18n="set.addMark"></button>
+  </div>
+  <div id="setlist"></div>
+</div>
+
+<!-- REPERTORIO -->
+<div class="view" id="v-lib">
+  <div class="tools">
+    <input type="search" id="q" data-i18n-placeholder="lib.search">
+    <select id="sortsel" data-i18n-aria="lib.sort">
+      <option value="add" data-i18n="sort.add"></option>
+      <option value="title" data-i18n="sort.title"></option>
+      <option value="artist" data-i18n="sort.artist"></option>
+      <option value="key" data-i18n="sort.key"></option>
+      <option value="bpm" data-i18n="sort.bpm"></option>
+    </select>
+    <button class="btn key" id="new" data-i18n="lib.new"></button>
+  </div>
+  <div class="tagbar" id="tagbar"></div>
+  <div id="liblist"></div>
+</div>
+
+<!-- OPZIONI -->
+<div class="view" id="v-opts">
+  <div class="form flush">
+    <div class="sect" data-i18n="opts.general"></div>
+    <div class="fld">
+      <label data-i18n="opts.theme"></label>
+      <select id="o-theme">
+        <option value="dark" data-i18n="opts.themeDark"></option>
+        <option value="light" data-i18n="opts.themeLight"></option>
+      </select>
+    </div>
+    <div class="fld">
+      <label data-i18n="opts.lang"></label>
+      <select id="o-lang">
+        <option value="auto" data-i18n="opts.langAuto"></option>
+        <option value="it">Italiano</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <div class="sect" data-i18n="opts.chords"></div>
+    <div class="fld">
+      <label data-i18n="opts.notation"></label>
+      <select id="o-notation">
+        <option value="en" data-i18n-html="opts.notationEn"></option>
+        <option value="it" data-i18n-html="opts.notationIt"></option>
+      </select>
+    </div>
+    <div class="fld">
+      <label data-i18n="opts.accid"></label>
+      <select id="o-accid">
+        <option value="auto" data-i18n="opts.accidAuto"></option>
+        <option value="sharp" data-i18n="opts.accidSharp"></option>
+        <option value="flat" data-i18n="opts.accidFlat"></option>
+      </select>
+      <div class="hint" data-i18n-html="opts.accidHint"></div>
+    </div>
+
+    <div class="sect" data-i18n="opts.live"></div>
+    <div class="fld">
+      <label data-i18n-html="opts.fs"></label>
+      <div class="ctl">
+        <button class="step" data-ofs="-2">A&minus;</button>
+        <span class="val" id="o-fsval">22</span>
+        <button class="step" data-ofs="2">A+</button>
+      </div>
+    </div>
+    <div class="fld">
+      <label data-i18n="opts.bar"></label>
+      <button class="btn tog" id="o-bar"></button>
+    </div>
+    <div class="fld">
+      <label data-i18n="opts.timer"></label>
+      <button class="btn tog" id="o-timer"></button>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.caps"></label>
+      <button class="btn tog" id="o-caps"></button>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.roots"></label>
+      <button class="btn tog" id="o-roots"></button>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.plain"></label>
+      <button class="btn tog" id="o-plain"></button>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.pedal"></label>
+      <select id="o-pedal">
+        <option value="song" data-i18n="opts.pedalSong"></option>
+        <option value="page" data-i18n="opts.pedalPage"></option>
+      </select>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.metroSound"></label>
+      <button class="btn tog" id="o-metro"></button>
+    </div>
+
+    <div class="sect" data-i18n="opts.data"></div>
+    <div class="fld">
+      <label data-i18n-html="opts.backup"></label>
+      <div class="brow">
+        <button class="btn" id="exp" data-i18n="opts.exp"></button>
+        <button class="btn act" id="expb" data-i18n="opts.expBand"></button>
+        <button class="btn" id="imp" data-i18n="opts.imp"></button>
+      </div>
+      <div class="hint" data-i18n-html="opts.backupHint"></div>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="opts.sync"></label>
+      <input id="o-tok" type="password" data-i18n-placeholder="opts.tokPh" autocomplete="off">
+      <input id="o-gist" type="text" data-i18n-placeholder="opts.gistPh">
+      <div class="opt2">
+        <button class="btn" id="o-push" data-i18n="opts.push"></button>
+        <button class="btn" id="o-pull" data-i18n="opts.pull"></button>
+      </div>
+      <div class="hint" data-i18n-html="opts.syncHint"></div>
+    </div>
+    <div class="fld">
+      <label data-i18n="opts.wipe"></label>
+      <button class="btn danger" id="o-wipe" data-i18n="opts.wipeBtn"></button>
+      <div class="hint" data-i18n="opts.wipeHint"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BARRA INFERIORE -->
+<nav class="bnav" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-v="set">
+    <svg class="bico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+    </svg>
+    <span data-i18n="tab.set"></span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-v="lib">
+    <svg class="bico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+    </svg>
+    <span data-i18n="tab.lib"></span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-v="opts">
+    <svg class="bico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    <span data-i18n="opts.title"></span>
+  </button>
+</nav>
+
+<!-- LIVE -->
+<div id="live">
+  <div class="lhead">
+    <button class="mini" id="lclose">&#10005;</button>
+    <span class="lnum" id="lnum"></span>
+    <span class="ltitle" id="ltitle"></span>
+    <button class="chip" id="ltime" data-i18n-title="live.timerReset"></button>
+    <span class="chip" id="lcapo"></span>
+    <span class="chip" id="lkey"></span>
+    <button class="chip" id="lbpm" data-i18n-title="live.metroHint"></button>
+    <button class="chip alarm off" id="lwake" data-i18n-title="live.wakeHint" data-i18n="live.wake"></button>
+    <button class="mini" id="ljump" data-i18n-title="live.jump">&#8981;</button>
+    <button class="mini" id="lgear">&#9881;</button>
+  </div>
+  <div id="sheet"></div>
+  <div class="drawer" id="drawer">
+    <div class="ctl">
+      <label data-i18n="live.key"></label>
+      <button class="step" data-tr="-1">&minus;</button>
+      <span class="val" id="trval">0</span>
+      <button class="step" data-tr="1">+</button>
+    </div>
+    <div class="ctl">
+      <label data-i18n="live.capo"></label>
+      <button class="step" data-capo="-1">&minus;</button>
+      <span class="val" id="capoval">0</span>
+      <button class="step" data-capo="1">+</button>
+    </div>
+    <div class="ctl">
+      <label data-i18n="live.text"></label>
+      <button class="step" data-fs="-2">A&minus;</button>
+      <span class="val" id="fsval">22</span>
+      <button class="step" data-fs="2">A+</button>
+    </div>
+    <div class="ctl">
+      <label data-i18n="live.lead"></label>
+      <button class="step" data-lead="-1">&minus;</button>
+      <span class="val" id="leadval">0s</span>
+      <button class="step" data-lead="1">+</button>
+    </div>
+    <div class="ctl">
+      <label data-i18n="live.scroll"></label>
+      <input type="range" id="spd" min="50" max="400" value="100" step="5">
+      <span class="val" id="spdval">100%</span>
+    </div>
+  </div>
+  <div class="lbar" id="lbar">
+    <button class="k6" id="kprev"><span class="g">&#8592;</span><span class="c" data-i18n="k6.prev"></span></button>
+    <button class="k6" id="kplay"><span class="g" id="kplayg">&#9654;&#65038;</span><span class="c" id="kplayc"></span></button>
+    <button class="k6" id="kstop"><span class="g">&#9632;</span><span class="c" data-i18n="k6.stop"></span></button>
+    <button class="k6" id="knext"><span class="g">&#8594;</span><span class="c" data-i18n="k6.next"></span></button>
+    <button class="k6" id="kstruct"><span class="g">&#8801;</span><span class="c" data-i18n="k6.struct"></span></button>
+    <button class="k6" id="klock">
+      <svg class="g" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+      </svg>
+      <span class="c" id="klockc"></span>
+    </button>
+  </div>
+  <button class="lfoot" id="nextbtn">
+    <div class="lbl" id="nextlbl"></div>
+    <div class="nm" id="nextnm"></div>
+  </button>
+</div>
+
+<!-- EDITOR -->
+<div id="edit">
+  <div class="lhead">
+    <button class="mini" id="eclose">&#10005;</button>
+    <span class="ltitle" data-i18n="ed.title"></span>
+  </div>
+  <div class="form">
+    <div class="fld"><label data-i18n="ed.songTitle"></label><input id="f-title" placeholder="Ultimo Giro"></div>
+    <div class="fld"><label data-i18n="ed.artist"></label>
+      <input id="f-artist" list="artisti" placeholder="COPYCUT" autocomplete="off">
+      <datalist id="artisti"></datalist>
+    </div>
+    <div class="grid3">
+      <div class="fld"><label data-i18n="ed.key"></label><input id="f-key" placeholder="Am"></div>
+      <div class="fld"><label>BPM</label>
+        <div class="bpmrow">
+          <input id="f-bpm" inputmode="numeric" placeholder="128">
+          <button class="btn act" id="etap" type="button" data-i18n="ed.tap" data-i18n-title="ed.tapHint"></button>
+        </div>
+      </div>
+      <div class="fld"><label data-i18n="ed.dur"></label><input id="f-dur" placeholder="3:40"></div>
+    </div>
+    <div class="hint" data-i18n-html="ed.keyHint"></div>
+    <div class="fld">
+      <label data-i18n-html="ed.tags"></label>
+      <input id="f-tags" data-i18n-placeholder="ed.tagsPh">
+    </div>
+    <div class="fld">
+      <label data-i18n-html="ed.sets"></label>
+      <div class="tagbar flat" id="f-sets"></div>
+    </div>
+    <div class="fld">
+      <label data-i18n-html="ed.notes"></label>
+      <select id="f-role"></select>
+      <textarea id="f-note" data-i18n-placeholder="ed.notesPh"></textarea>
+    </div>
+    <div class="fld">
+      <label data-i18n="ed.body"></label>
+      <div class="brow">
+        <button class="btn act" id="eug" type="button" data-i18n="ed.paste"></button>
+        <button class="btn act" id="ebconv" type="button" data-i18n="ed.convert"></button>
+        <button class="btn tog" id="ebprev" type="button" data-i18n="ed.preview"></button>
+      </div>
+      <textarea id="f-body" spellcheck="false"></textarea>
+      <div id="f-prev" class="prev off"></div>
+      <div class="hint" data-i18n-html="ed.bodyHint"></div>
+    </div>
+  </div>
+  <div class="efoot">
+    <button class="btn danger" id="edel" data-i18n="ed.del"></button>
+    <button class="btn" id="edup" data-i18n="ed.dup"></button>
+    <button class="btn key" id="esave" data-i18n="ed.save"></button>
+  </div>
+</div>
+
+<!-- INCOLLA UN TAB -->
+<div id="ug">
+  <div class="lhead">
+    <button class="mini" id="ugclose">&#10005;</button>
+    <span class="ltitle" data-i18n="ug.title"></span>
+  </div>
+  <div class="form">
+    <div class="fld">
+      <label data-i18n="ug.label"></label>
+      <textarea id="f-ug" spellcheck="false" data-i18n-placeholder="ug.ph"></textarea>
+      <div class="hint" data-i18n-html="ug.hint"></div>
+    </div>
+  </div>
+  <div class="efoot">
+    <button class="btn key" id="ugconv" data-i18n="ug.go"></button>
+  </div>
+</div>
+
+<!-- GRUPPI -->
+<div id="bands">
+  <div class="lhead">
+    <button class="mini" id="bclose">&#10005;</button>
+    <span class="ltitle" data-i18n="bands.title"></span>
+  </div>
+  <div class="form flush">
+    <div id="blist"></div>
+    <div class="fld">
+      <label data-i18n-html="bands.me"></label>
+      <select id="b-role"></select>
+    </div>
+  </div>
+  <div class="efoot">
+    <button class="btn" id="bnew" data-i18n="bands.new"></button>
+    <button class="btn" id="bren" data-i18n="bands.rename"></button>
+    <button class="btn danger" id="bdel" data-i18n="bands.del"></button>
+  </div>
+</div>
+
+<!-- FUORI SCALETTA (RICERCA IN LIVE) -->
+<div id="lpick">
+  <div class="lhead">
+    <button class="mini" id="lpick-close">&#10005;</button>
+    <span class="ltitle" data-i18n="live.jumpTitle"></span>
+  </div>
+  <div class="tools">
+    <input type="search" id="lpick-q" data-i18n-placeholder="live.jumpPh">
+  </div>
+  <div class="picklist" id="lpick-list"></div>
+</div>
+
+<!-- DIALOGO IN-APP -->
+<div id="dlg">
+  <div class="dlgbox" id="dlg-box">
+    <div class="dlgmsg" id="dlg-msg"></div>
+    <input id="dlg-in1" class="dlgin off" type="text">
+    <input id="dlg-in2" class="dlgin off" type="text">
+    <div class="dlgact">
+      <button class="btn" id="dlg-cancel" type="button"></button>
+      <button class="btn key" id="dlg-ok" type="button"></button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- STAMPA SCALETTA -->
+<div id="print-sheet"></div>
+
+<!-- AVVISO DI VERSIONE NUOVA -->
+<div id="upd" class="off">
+  <span class="txt" data-i18n="upd.text"></span>
+  <button class="btn" id="updlater" data-i18n="upd.later"></button>
+  <button class="btn key" id="updgo" data-i18n="upd.go"></button>
+</div>
+</body>
+</html>

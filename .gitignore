@@ -14,6 +14,8 @@ backup-tablet/
 .tmp/
 web/node_modules/
 web/dist/
+pwa/node_modules/
+pwa/dist/
 web/*.tsbuildinfo
 studio/data/
 *.log
