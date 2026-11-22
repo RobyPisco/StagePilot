@@ -36,29 +36,29 @@ fun HomeScreen(db: DB, onStage: (String) -> Unit, onImport: () -> Unit, onConcer
         Column(Modifier.fillMaxSize().widthIn(max = 1000.dp).verticalScroll(rememberScrollState()).padding(bottom = 22.dp)) {
             BrandBar(band.name, onSettings)
             Row(Modifier.padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                GhostButton("Band Live · collega i tablet",Modifier.weight(1f),onClick=onBandLive)
-                GhostButton("Guida e aiuto",Modifier.weight(1f),onClick=onGuide)
+                GhostButton(Str.bandLiveBtn,Modifier.weight(1f),onClick=onBandLive)
+                GhostButton(Str.guideBtn,Modifier.weight(1f),onClick=onGuide)
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-                GhostButton(if (pcBusy) "Sincronizzazione in corso…" else if (pcConfigured) "Sincronizza con il PC" else "Collega lo studio PC", Modifier.fillMaxWidth()) {
+                GhostButton(if (pcBusy) Str.syncBusy else if (pcConfigured) Str.syncNow else Str.connectPc, Modifier.fillMaxWidth()) {
                     if (!pcBusy) { if (pcConfigured) onSync() else onSettings() }
                 }
-                Text(pcStatus.ifBlank { "Dopo le modifiche sul web, tocca qui per aggiornare brani e scalette." }, color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp))
+                Text(pcStatus.ifBlank { Str.syncHint }, color = Palco.Dim, fontFamily = Sans, fontSize = 12.sp, modifier = Modifier.padding(top = 7.dp))
             }
-            LargeTitle("La tua musica.\nIl tuo prossimo palco.", "Tutto pronto, un brano alla volta.")
+            LargeTitle(Str.homeTitle, Str.homeSub)
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Palco.AmberDeep).padding(24.dp)) {
-                    Text(gig?.let { "${it.date} · ${it.time} · ${it.location}" } ?: "LA TUA PROSSIMA SERATA", color = Palco.Amber, fontFamily = Sans, fontSize = 11.sp, letterSpacing = 1.5.sp)
+                    Text(gig?.let { "${it.date} · ${it.time} · ${it.location}" } ?: Str.nextGigLabel, color = Palco.Amber, fontFamily = Sans, fontSize = 11.sp, letterSpacing = 1.5.sp)
                     Text(gig?.title ?: showSet?.name ?: "Prepara la prima scaletta", color = Palco.Ink, fontFamily = Sans, fontSize = 29.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 15.dp))
-                    Text("${prepared.tracks} brani · ${mmss(prepared.duration)}${if (prepared.missingDurations > 0) " + durate da definire" else " minuti"}", color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.padding(top = 9.dp, bottom = 22.dp))
-                    AmberButton("▶  Vai sul palco", enabled = showSet?.items?.isNotEmpty() == true) { showSet?.let { onStage(it.id) } }
+                    Text("${prepared.tracks} ${Str.statSongs} · ${mmss(prepared.duration)}", color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.padding(top = 9.dp, bottom = 22.dp))
+                    AmberButton(Str.goStage, enabled = showSet?.items?.isNotEmpty() == true) { showSet?.let { onStage(it.id) } }
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Stat(band.songs.size.toString(), "brani in repertorio")
-                    Stat(ready.toString(), "pronti da suonare")
-                    Stat(band.sets.size.toString(), "scalette")
+                    Stat(band.songs.size.toString(), Str.statSongs)
+                    Stat(ready.toString(), Str.statReady)
+                    Stat(band.sets.size.toString(), Str.statSets)
                 }
-                Text("La prossima prova", color = Palco.Ink, fontFamily = Sans, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
+                Text(Str.nextPractice, color = Palco.Ink, fontFamily = Sans, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Palco.Panel).clickable(onClick = onPractice).padding(19.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Ic.Note, null, tint = Palco.Purple, modifier = Modifier.size(26.dp))
                     Column(Modifier.weight(1f).padding(horizontal = 15.dp)) {
@@ -68,8 +68,8 @@ fun HomeScreen(db: DB, onStage: (String) -> Unit, onImport: () -> Unit, onConcer
                     Icon(Ic.Chevron, null, tint = Palco.Dim, modifier = Modifier.size(16.dp))
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 17.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GhostButton("Importa un brano", Modifier.weight(1f), onClick = onImport)
-                    GhostButton("Prepara una serata", Modifier.weight(1f), onClick = onConcerts)
+                    GhostButton(Str.importSong, Modifier.weight(1f), onClick = onImport)
+                    GhostButton(Str.prepGig, Modifier.weight(1f), onClick = onConcerts)
                 }
             }
         }

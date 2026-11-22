@@ -155,5 +155,14 @@ class CoreTest {
         assertEquals("dark", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options()).theme)
         assertEquals("light", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(theme = "light")).theme)
         assertEquals("dark", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(theme = "neon")).theme)
+        assertEquals("auto", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options()).lang)
+        assertEquals("es", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(lang = "es")).lang)
+        assertEquals("auto", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(lang = "de")).lang)
+        assertEquals("it", it.stagepilot.app.ui.resolveLang("auto", "it"))
+        assertEquals("es", it.stagepilot.app.ui.resolveLang("auto", "es"))
+        assertEquals("fr", it.stagepilot.app.ui.resolveLang("auto", "fr"))
+        assertEquals("pt", it.stagepilot.app.ui.resolveLang("auto", "pt"))
+        assertEquals("en", it.stagepilot.app.ui.resolveLang("auto", "de"))
+        assertEquals("fr", it.stagepilot.app.ui.resolveLang("fr", "it"))
     }
 }

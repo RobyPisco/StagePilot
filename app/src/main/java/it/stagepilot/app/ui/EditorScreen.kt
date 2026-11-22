@@ -152,11 +152,11 @@ fun EditorScreen(
                     Icon(Ic.Close, "Chiudi senza salvare", tint = Palco.Dim, modifier = Modifier.size(22.dp))
                 }
                 Text(
-                    if (song == null) "Nuovo brano" else "Modifica brano", color = Palco.Ink, fontFamily = Condensed,
+                    if (song == null) Str.newSong else Str.editSong, color = Palco.Ink, fontFamily = Condensed,
                     fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.weight(1f).padding(start = 6.dp),
                 )
                 Text(
-                    "SALVA", color = if (canSave) Palco.OnAmber else Palco.Dim, fontFamily = Condensed,
+                    Str.saveUpper, color = if (canSave) Palco.OnAmber else Palco.Dim, fontFamily = Condensed,
                     fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 1.4.sp,
                     modifier = Modifier
                         .background(if (canSave) Palco.Amber else Palco.Outline, androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
@@ -202,7 +202,7 @@ fun EditorScreen(
                     "TESTO E ACCORDI", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 6.dp),
                 )
-                Segmented(listOf("Modifica", "Anteprima"), if (preview) 1 else 0) { preview = it == 1 }
+                Segmented(listOf(Str.editMode, Str.previewMode), if (preview) 1 else 0) { preview = it == 1 }
                 if (!preview) {
                     PalcoField(
                         body, { body = it }, "Chart", singleLine = false, minLines = 10, mono = true,
@@ -276,13 +276,13 @@ fun EditorScreen(
     }
 
     if (confirmDiscard) PalcoDialog(
-        title = "Modifiche non salvate",
-        confirmText = "Esci senza salvare",
+        title = Str.discardTitle,
+        confirmText = Str.discardBtn,
         onConfirm = { confirmDiscard = false; onClose() },
         onDismiss = { confirmDiscard = false },
     ) {
         Text(
-            "Ci sono modifiche aperte su questo brano. Se esci adesso andranno perse.",
+            Str.discardMsg,
             color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
         )
     }

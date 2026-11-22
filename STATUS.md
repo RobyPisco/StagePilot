@@ -81,3 +81,13 @@ Implementato editor con testo e anteprima affiancati. Accordi agganciati a posiz
 Nuovo EXE e ZIP 0.2.1, guida aggiornata con istruzioni per l’editor. Android resta 0.2.0: stesso formato del chart, nessuna migrazione dati. Chi usa lo studio da sorgente deve ricaricare il browser; chi usa l’EXE deve chiudere quello precedente e aprire il nuovo. I dati dell’EXE rimangono in %LOCALAPPDATA%\StagePilot\Studio.
 
 Collaudato anche il conflitto sullo stesso testo: confronto bozza/versione salvata apparso dopo la revisione concorrente; scelta esplicita Mantieni la mia versione e nuovo salvataggio riusciti. Il riferimento di confronto aggiornato viene conservato anche nella bozza recuperabile.
+
+## Android 0.2.1 — Tema Giorno, PDF da palco, Opzioni, Guida e 5 lingue (22 novembre 2026)
+
+- Allineata l'app Android alla versione `0.2.1` (build 6) e installata sul Fire HD 8.
+- **Editor Android:** aggiunti TAP tempo per i BPM, Anteprima immediata del chart formattato e conferma prima di uscire con modifiche non salvate.
+- **Palco & Impostazioni:** pedale Bluetooth / tastiera configurabile (*Brano prec / succ* oppure *Scorri pagina* mezza pagina fluida), toggle *Testo in maiuscolo*, tema reattivo **Palco (scuro)** / **Giorno (chiaro)** esteso anche alla guida HTML offline.
+- **Scalette:** aggiunto export **PDF da palco (A4)** a caratteri giganti con impaginazione multi-pagina in *Scalette → Condividi*.
+- **Navigazione e guida:** scheda **Opzioni** sempre visibile nella barra inferiore (6 tab), scheda *Guida interna e aiuto* in cima alle Opzioni, manuale offline rigenerato (`guida.html`), nome file backup aggiornato a `stagepilot-backup-YYYYMMDD.json`.
+- **Multilingua:** selettore lingua **Auto / IT / EN / ES / FR / PT** (con traduzione dei ruoli a schermo mantenendo le chiavi italiane nel DB).
+- Verificati tutti i test Android JVM, 37 test Python studio e 17 test web.

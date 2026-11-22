@@ -64,7 +64,7 @@ fun SettingsScreen(
 
     Box(Modifier.fillMaxSize().background(Palco.Pitch).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
-            LargeTitle("Opzioni", "Gruppo, scalette, lettura, guida e backup")
+            LargeTitle(Str.optionsTitle, Str.optionsSub)
             Column(
                 Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -76,21 +76,21 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Guida interna e aiuto", color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                        Text("Spiega tutte le funzioni: palco, pedale, PDF, Band Live, dossier e backup.", color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+                        Text(Str.guideCardTitle, color = Palco.Ink, fontFamily = Sans, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(Str.guideCardSub, color = Palco.Dim, fontFamily = Sans, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
                     }
-                    Icon(Ic.Chevron, "Apri guida", tint = Palco.Amber, modifier = Modifier.size(18.dp))
+                    Icon(Ic.Chevron, Str.guideBtn, tint = Palco.Amber, modifier = Modifier.size(18.dp))
                 }
 
                 // ── gruppo ──
-                Section("Gruppo")
+                Section(Str.secBand)
                 if (db.bands.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     db.bands.forEach { b -> Chip(b.name, selected = b.id == band.id) { store.switchBand(b.id) } }
                 }
                 PalcoField(bandName, { bandName = it; if (it.isNotBlank()) store.renameBand(it) }, "Nome del gruppo")
                 Hint("Il tuo ruolo: decide quali note personali vedi in live.")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ROLES.forEach { r -> Chip(r, selected = r == band.me) { store.setRole(r) } }
+                    ROLES.forEach { r -> Chip(Str.role(r), selected = r == band.me) { store.setRole(r) } }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GhostButton("+ Nuovo gruppo") { newBandDialog = true }
@@ -119,22 +119,26 @@ fun SettingsScreen(
                 GhostButton("+ Nuova scaletta") { newSetDialog = true }
 
                 // ── lettura ──
-                Section("Come si legge")
-                Hint("Tema dell'app: Palco al buio, Giorno ad alto contrasto per esterni")
-                Segmented(listOf("Palco (scuro)", "Giorno (chiaro)"), if (opt.theme == "light") 1 else 0) { i ->
+                Section(Str.secReading)
+                Hint(Str.langLabel)
+                Segmented(listOf(Str.langAuto, "IT", "EN", "ES", "FR", "PT"), SUPPORTED_LANGS.indexOf(opt.lang).coerceAtLeast(0)) { i ->
+                    store.updateOptions { it.copy(lang = SUPPORTED_LANGS[i]) }
+                }
+                Hint(Str.themeHint)
+                Segmented(listOf(Str.themeDark, Str.themeLight), if (opt.theme == "light") 1 else 0) { i ->
                     store.updateOptions { it.copy(theme = if (i == 1) "light" else "dark") }
                 }
-                Hint("Notazione degli accordi")
+                Hint(Str.notationHint)
                 Segmented(listOf("C D E", "Do Re Mi"), if (opt.italian) 1 else 0) { i ->
                     store.updateOptions { it.copy(notation = if (i == 1) "it" else "en") }
                 }
-                Hint("Alterazioni: automatiche scelgono dalla tonalità (Si♭ in Fa, La# in Mi)")
-                Segmented(listOf("Automatiche", "Diesis", "Bemolli"), listOf("auto", "sharp", "flat").indexOf(opt.accid).coerceAtLeast(0)) { i ->
+                Hint(Str.accidHint)
+                Segmented(listOf(Str.accidAuto, Str.accidSharp, Str.accidFlat), listOf("auto", "sharp", "flat").indexOf(opt.accid).coerceAtLeast(0)) { i ->
                     store.updateOptions { it.copy(accid = listOf("auto", "sharp", "flat")[i]) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Corpo del testo in live: ${opt.fs}", color = Palco.Ink, fontFamily = Sans,
+                        "${Str.liveTextSize}: ${opt.fs}", color = Palco.Ink, fontFamily = Sans,
                         fontWeight = FontWeight.SemiBold, fontSize = 16.sp, modifier = Modifier.weight(1f),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -143,31 +147,31 @@ fun SettingsScreen(
                     }
                 }
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Palco.Panel).padding(horizontal = 16.dp, vertical = 6.dp)) {
-                    Toggle("Barra dei sei comandi", "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
-                    Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
-                    Toggle("Lampeggio dei BPM", "Un cerchio in testata che batte il tempo del brano: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
-                    Toggle("Click del metronomo", "In live tocchi il cerchio del battito per sentire il tic (e di nuovo per fermarlo). Parte sempre spento.", opt.click) { v -> store.updateOptions { it.copy(click = v) } }
-                    Toggle("Testo in maiuscolo", "Solo il cantato: gli accordi restano com'erano.", opt.caps) { v -> store.updateOptions { it.copy(caps = v) } }
-                    Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
-                    Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
+                    Toggle(Str.togBar, "In fondo alla vista live.", opt.bar) { v -> store.updateOptions { it.copy(bar = v) } }
+                    Toggle(Str.togTimer, "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
+                    Toggle(Str.togPulse, "Un cerchio in testata che batte il tempo del brano: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
+                    Toggle(Str.togClick, "In live tocchi il cerchio del battito per sentire il tic (e di nuovo per fermarlo). Parte sempre spento.", opt.click) { v -> store.updateOptions { it.copy(click = v) } }
+                    Toggle(Str.togCaps, "Solo il cantato: gli accordi restano com'erano.", opt.caps) { v -> store.updateOptions { it.copy(caps = v) } }
+                    Toggle(Str.togRoots, "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
+                    Toggle(Str.togPlain, "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
                 }
-                Hint("Pedale Bluetooth / tastiera (frecce destra/sinistra e PagSu/PagGiù)")
-                Segmented(listOf("Brano prec / succ", "Scorri pagina"), if (opt.pedal == "page") 1 else 0) { i ->
+                Hint(Str.pedalHint)
+                Segmented(listOf(Str.pedalSong, Str.pedalPage), if (opt.pedal == "page") 1 else 0) { i ->
                     store.updateOptions { it.copy(pedal = if (i == 1) "page" else "song") }
                 }
 
                 // ── backup ──
-                Section("Backup")
+                Section(Str.secBackup)
                 Hint(
                     "Il backup è un file JSON con tutti i gruppi, i brani e le scalette. È lo stesso formato dell'app web: " +
                         "un backup di là si importa qui. Per condividere con la band basta mandare il file.",
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GhostButton("Esporta") { onExport() }
-                    GhostButton("Importa") { onImport() }
+                    GhostButton(Str.exportBtn) { onExport() }
+                    GhostButton(Str.importBtn) { onImport() }
                 }
                 val recoveryContext = androidx.compose.ui.platform.LocalContext.current
-                GhostButton("Annulla ultima modifica") {
+                GhostButton(Str.undoBtn) {
                     val restored = store.undoLast()
                     android.widget.Toast.makeText(recoveryContext, if (restored) "Stato precedente ripristinato" else "Non ci sono modifiche da annullare", android.widget.Toast.LENGTH_SHORT).show()
                 }

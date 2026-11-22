@@ -83,8 +83,9 @@ val Mono = FontFamily(
 )
 
 @Composable
-fun StagePilotTheme(light: Boolean = false, content: @Composable () -> Unit) {
+fun StagePilotTheme(light: Boolean = false, lang: String = "auto", content: @Composable () -> Unit) {
     Palco.apply(light)
+    Str.apply(lang)
     val scheme = if (light) {
         lightColorScheme(
             primary = Palco.Amber,

@@ -124,6 +124,8 @@ data class Options(
     val pedal: String = "song",
     /** "dark" (Palco) oppure "light" (Giorno) */
     val theme: String = "dark",
+    /** "auto", "it", "en", "es", "fr", "pt" */
+    val lang: String = "auto",
     val sort: String = "add",
     val liveSet: String = "",
     val liveIndex: Int = 0,

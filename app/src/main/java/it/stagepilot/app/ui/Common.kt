@@ -118,12 +118,12 @@ fun TabBar(selected: Int, onSelect: (Int) -> Unit) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Palco.Line))
         Row(Modifier.fillMaxWidth()) {
             listOf(
-                Ic.Home to "Oggi",
-                Ic.Note to "Brani",
-                Ic.Struct to "Scalette",
-                Ic.Practice to "Prove",
-                Ic.Calendar to "Concerti",
-                Ic.Sliders to "Opzioni",
+                Ic.Home to Str.tabHome,
+                Ic.Note to Str.tabSongs,
+                Ic.Struct to Str.tabSets,
+                Ic.Practice to Str.tabPractice,
+                Ic.Calendar to Str.tabConcerts,
+                Ic.Sliders to Str.tabOptions,
             ).forEachIndexed { i, (icon, label) ->
                 val c = if (i == selected) Palco.Amber else Palco.Dim
                 Column(

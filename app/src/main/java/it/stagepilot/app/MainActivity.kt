@@ -55,6 +55,7 @@ import it.stagepilot.app.data.parsePcPackage
 import kotlinx.coroutines.launch
 import it.stagepilot.app.data.entries
 import it.stagepilot.app.ui.StagePilotTheme
+import it.stagepilot.app.ui.Str
 import it.stagepilot.app.ui.Condensed
 import it.stagepilot.app.ui.EditorScreen
 import it.stagepilot.app.ui.GhostButton
@@ -132,7 +133,7 @@ class MainActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = light
                 }
             }
-            StagePilotTheme(light = light) {
+            StagePilotTheme(light = light, lang = db.opt.lang) {
                 App(store, incoming, incomingSongs, incomingSetlist, incomingEdits)
             }
         }
@@ -384,7 +385,7 @@ private fun App(
     }
 
     when (route) {
-        "guide" -> it.stagepilot.app.ui.GuideScreen {route="main";tab=0}
+        "guide" -> it.stagepilot.app.ui.GuideScreen(light = db.opt.theme == "light") {route="main";tab=0}
         "band" -> it.stagepilot.app.ui.BandLiveScreen(db,liveController,bandLive,{route="band-stage"},{route="main";tab=0})
         "band-stage" -> {
             val library=bandLive.library
@@ -485,7 +486,7 @@ private fun App(
                     onGuide = { route = "guide" },
                     onExport = {
                         val stamp = SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(Date())
-                        exportLauncher.launch("backline-backup-$stamp.json")
+                        exportLauncher.launch("stagepilot-backup-$stamp.json")
                     },
                     onImport = { importLauncher.launch(arrayOf("*/*")) },
                     pcAddr = pcAddr,
@@ -582,7 +583,7 @@ private fun App(
     }
 
     if (shareChoice) PalcoDialog(
-        title = "Condividi la scaletta",
+        title = Str.shareTitle,
         confirmText = "File StagePilot",
         onConfirm = { shareChoice = false; shareSetFile() },
         onDismiss = { shareChoice = false },
@@ -593,8 +594,8 @@ private fun App(
                     "e si trova la scaletta pronta. «Solo elenco» manda i titoli come testo, per chiunque.",
                 color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
             )
-            GhostButton("PDF da palco (A4)") { shareChoice = false; shareSetPdf() }
-            GhostButton("Solo elenco (testo)") { shareChoice = false; shareSetText() }
+            GhostButton(Str.sharePdf) { shareChoice = false; shareSetPdf() }
+            GhostButton(Str.shareText) { shareChoice = false; shareSetText() }
         }
     }
 
