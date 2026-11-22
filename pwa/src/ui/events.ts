@@ -254,7 +254,7 @@ async function onClick(e: MouseEvent): Promise<void> {
      secondo colpo, perché la prima richiesta era partita in un momento in
      cui il sistema non era disposto a concederlo. */
   if (b.id === 'lwake') { await takeWake(); return; }
-  if (b.id === 'lgear') { $('#drawer').classList.toggle('on'); return; }
+  if (b.id === 'lgear' || b.id === 'lkey') { $('#drawer').classList.toggle('on'); return; }
   if (b.id === 'ltime') { live.t0 = Date.now(); return drawTimer(); }
   if (b.id === 'kprev') {
     if (live.offSong) { live.offSong = null; paint(); return; }

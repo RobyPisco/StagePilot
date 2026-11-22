@@ -294,7 +294,9 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
                 val k = keyLabel(entry.song, opt.notation, opt.accid)
                 if (k.isNotEmpty()) Text(
                     k, color = Palco.OnAmber, fontFamily = Mono, fontWeight = FontWeight.SemiBold, fontSize = 22.sp,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Palco.Amber).padding(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Palco.Amber)
+                        .clickable { toolsOpen = !toolsOpen }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
                 )
             }
         }
@@ -390,23 +392,51 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
             }
         }
 
-        // trasposizione, notazione, corpo del testo
-        if (toolsOpen) Row(
-            Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        // trasposizione, capotasto, notazione, corpo del testo — con etichette chiare
+        if (toolsOpen) {
             val song = (entry as? Entry.Track)?.song
-            ToolButton("−", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr - 1).coerceIn(-11, 11)) } } }
-            Text(
-                (song?.tr ?: 0).let { if (it > 0) "+$it" else "$it" }, color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
-                textAlign = TextAlign.Center, modifier = Modifier.width(30.dp),
-            )
-            ToolButton("+", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr + 1).coerceIn(-11, 11)) } } }
-            Spacer(Modifier.weight(1f))
-            ToolButton("Do Re Mi", active = opt.italian) { store.updateOptions { it.copy(notation = if (it.notation == "it") "en" else "it") } }
-            ToolButton("A−") { store.updateOptions { it.copy(fs = (it.fs - 2).coerceIn(14, 48)) } }
-            ToolButton("A+") { store.updateOptions { it.copy(fs = (it.fs + 2).coerceIn(14, 48)) } }
+            Column(
+                Modifier.fillMaxWidth().background(Palco.Panel).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Tonalità", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.width(66.dp))
+                    ToolButton("−", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr - 1).coerceIn(-11, 11)) } } }
+                    Text(
+                        (song?.tr ?: 0).let { if (it > 0) "+$it" else "$it" }, color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.width(34.dp),
+                    )
+                    ToolButton("+", enabled = song != null) { song?.let { s -> personalSong(s.id) { it.copy(tr = (it.tr + 1).coerceIn(-11, 11)) } } }
+                    Spacer(Modifier.weight(1f))
+                    Text("Capo", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                    ToolButton("−", enabled = song != null && song.capo > 0) { song?.let { s -> personalSong(s.id) { it.copy(capo = (it.capo - 1).coerceIn(0, 11)) } } }
+                    Text(
+                        (song?.capo ?: 0).let { if (it > 0) roman(it) else "0" }, color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.width(34.dp),
+                    )
+                    ToolButton("+", enabled = song != null && song.capo < 11) { song?.let { s -> personalSong(s.id) { it.copy(capo = (it.capo + 1).coerceIn(0, 11)) } } }
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Notazione", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp, modifier = Modifier.width(66.dp))
+                    ToolButton("Do Re Mi", active = opt.italian) { store.updateOptions { it.copy(notation = if (it.notation == "it") "en" else "it") } }
+                    Spacer(Modifier.weight(1f))
+                    Text("Testo", color = Palco.Dim, fontFamily = Condensed, fontSize = 14.sp)
+                    ToolButton("A−") { store.updateOptions { it.copy(fs = (it.fs - 2).coerceIn(14, 48)) } }
+                    Text(
+                        "${opt.fs}", color = Palco.Ink, fontFamily = Mono, fontSize = 14.sp,
+                        textAlign = TextAlign.Center, modifier = Modifier.width(30.dp),
+                    )
+                    ToolButton("A+") { store.updateOptions { it.copy(fs = (it.fs + 2).coerceIn(14, 48)) } }
+                }
+            }
         }
 
         // velocità dello scorrimento, salvata sul brano: si registra una volta in prova
