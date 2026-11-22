@@ -107,6 +107,10 @@ fun SettingsScreen(
 
                 // ── lettura ──
                 Section("Come si legge")
+                Hint("Tema dell'app: Palco al buio, Giorno ad alto contrasto per esterni")
+                Segmented(listOf("Palco (scuro)", "Giorno (chiaro)"), if (opt.theme == "light") 1 else 0) { i ->
+                    store.updateOptions { it.copy(theme = if (i == 1) "light" else "dark") }
+                }
                 Hint("Notazione degli accordi")
                 Segmented(listOf("C D E", "Do Re Mi"), if (opt.italian) 1 else 0) { i ->
                     store.updateOptions { it.copy(notation = if (i == 1) "it" else "en") }

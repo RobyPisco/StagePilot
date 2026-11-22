@@ -123,7 +123,19 @@ class MainActivity : ComponentActivity() {
         val store = Store(applicationContext)
         // se l'attività si ricrea (rotazione, memoria) l'intent è lo stesso: non riaprire l'importazione
         if (savedInstanceState == null) readShared(intent)
-        setContent { StagePilotTheme { App(store, incoming, incomingSongs, incomingSetlist, incomingEdits) } }
+        setContent {
+            val db = store.db.value
+            val light = db.opt.theme == "light"
+            androidx.compose.runtime.SideEffect {
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = light
+                    isAppearanceLightNavigationBars = light
+                }
+            }
+            StagePilotTheme(light = light) {
+                App(store, incoming, incomingSongs, incomingSetlist, incomingEdits)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -352,6 +364,25 @@ private fun App(
         context.startActivity(Intent.createChooser(send, "Condividi la scaletta"))
     }
 
+    /** Genera e condivide il PDF A4 della scaletta da palco (caratteri giganti). */
+    fun shareSetPdf() {
+        val set = band.curSet ?: return
+        runCatching {
+            val dir = java.io.File(context.cacheDir, "condivisi").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+            val slug = set.name.lowercase().map { if (it.isLetterOrDigit()) it else '-' }.joinToString("").trim('-').ifEmpty { "scaletta" }
+            val f = java.io.File(dir, "scaletta-$slug.pdf")
+            it.stagepilot.app.data.writeSetlistPdf(f, band, set, db.opt)
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.files", f)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "${band.name} — ${set.name} (PDF)")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(send, "Scaletta PDF da palco"))
+        }.onFailure { toast(context, "Non riesco a creare il PDF") }
+    }
+
     when (route) {
         "guide" -> it.stagepilot.app.ui.GuideScreen {route="main";tab=0}
         "band" -> it.stagepilot.app.ui.BandLiveScreen(db,liveController,bandLive,{route="band-stage"},{route="main";tab=0})
@@ -561,6 +592,7 @@ private fun App(
                     "e si trova la scaletta pronta. «Solo elenco» manda i titoli come testo, per chiunque.",
                 color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
             )
+            GhostButton("PDF da palco (A4)") { shareChoice = false; shareSetPdf() }
             GhostButton("Solo elenco (testo)") { shareChoice = false; shareSetText() }
         }
     }

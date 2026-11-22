@@ -122,6 +122,8 @@ data class Options(
     val plain: Boolean = false,
     /** "song" (brano prec/succ) oppure "page" (scorri mezza pagina) per pedale Bluetooth/tastiera */
     val pedal: String = "song",
+    /** "dark" (Palco) oppure "light" (Giorno) */
+    val theme: String = "dark",
     val sort: String = "add",
     val liveSet: String = "",
     val liveIndex: Int = 0,

@@ -148,9 +148,12 @@ class CoreTest {
         assertEquals(30, bpmFromTaps(listOf(1000L, 3400L)))
     }
 
-    @Test fun normalizePedalOption() {
+    @Test fun normalizePedalAndThemeOptions() {
         assertEquals("song", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options()).pedal)
         assertEquals("page", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(pedal = "page")).pedal)
         assertEquals("song", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(pedal = "other")).pedal)
+        assertEquals("dark", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options()).theme)
+        assertEquals("light", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(theme = "light")).theme)
+        assertEquals("dark", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(theme = "neon")).theme)
     }
 }
