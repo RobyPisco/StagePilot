@@ -34,12 +34,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import it.stagepilot.app.core.SheetOpts
+import it.stagepilot.app.core.bpmFromTaps
+import it.stagepilot.app.core.flatFor
 import it.stagepilot.app.core.looksRawTab
 import it.stagepilot.app.core.normalizeBody
+import it.stagepilot.app.core.renderSheet
 import it.stagepilot.app.core.secs
 import it.stagepilot.app.core.tabToChordPro
 import it.stagepilot.app.core.toEnglish
 import it.stagepilot.app.data.Band
+import it.stagepilot.app.data.Options
 import it.stagepilot.app.data.Song
 
 /* L'editor del brano. Il testo si scrive con gli accordi tra [parentesi
@@ -48,6 +56,7 @@ import it.stagepilot.app.data.Song
 @Composable
 fun EditorScreen(
     band: Band,
+    opt: Options = Options(),
     song: Song?,
     draft: Song? = null,
     inSetInitial: Boolean,
@@ -74,6 +83,36 @@ fun EditorScreen(
     var noteMe by rememberSaveable(key) { mutableStateOf(src?.notes?.get(band.me) ?: "") }
     var inSet by rememberSaveable(key) { mutableStateOf(inSetInitial) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDiscard by remember { mutableStateOf(false) }
+    var preview by rememberSaveable(key) { mutableStateOf(false) }
+    val taps = remember { mutableListOf<Long>() }
+
+    val dirty = title != (src?.title ?: "") ||
+        artist != (src?.artist ?: "") ||
+        tone != (src?.key ?: "") ||
+        bpm != (src?.bpm?.toString() ?: "") ||
+        dur != (src?.dur ?: "") ||
+        tags != (src?.tags?.joinToString(", ") ?: "") ||
+        capo != (src?.capo?.toString() ?: "0") ||
+        lead != (src?.lead?.toString() ?: "0") ||
+        body != (src?.body ?: "") ||
+        readiness != (src?.status ?: "study") ||
+        practice != (src?.practice ?: "") ||
+        noteAll != (src?.notes?.get("Tutti") ?: "") ||
+        noteMe != (src?.notes?.get(band.me) ?: "") ||
+        inSet != inSetInitial
+
+    fun requestClose() {
+        if (dirty) confirmDiscard = true else onClose()
+    }
+
+    fun recordTap() {
+        val now = System.currentTimeMillis()
+        if (taps.isNotEmpty() && now - taps.last() > 2500L) taps.clear()
+        taps.add(now)
+        if (taps.size > 9) taps.removeAt(0)
+        bpmFromTaps(taps)?.let { bpm = it.toString() }
+    }
 
     val durOk = dur.isBlank() || secs(dur) > 0
     val bpmOk = bpm.isBlank() || bpm.toIntOrNull() in 20..400
@@ -101,7 +140,7 @@ fun EditorScreen(
         onSave(saved, inSet)
     }
 
-    BackHandler(onBack = onClose)
+    BackHandler(onBack = ::requestClose)
 
     Box(Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {
@@ -109,7 +148,7 @@ fun EditorScreen(
                 Modifier.fillMaxWidth().background(Palco.Panel).padding(start = 6.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(44.dp).clickable(onClick = ::requestClose), contentAlignment = Alignment.Center) {
                     Icon(Ic.Close, "Chiudi senza salvare", tint = Palco.Dim, modifier = Modifier.size(22.dp))
                 }
                 Text(
@@ -133,9 +172,12 @@ fun EditorScreen(
             ) {
                 PalcoField(title, { title = it }, "Titolo")
                 PalcoField(artist, { artist = it }, "Artista")
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                     PalcoField(tone, { tone = it }, "Tonalità", modifier = Modifier.weight(1f), supporting = "Am, Do, F#m…")
-                    PalcoField(bpm, { bpm = it.filter(Char::isDigit).take(3) }, "BPM", modifier = Modifier.weight(1f), keyboard = KeyboardType.Number, error = !bpmOk)
+                    Column(Modifier.weight(1.1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PalcoField(bpm, { bpm = it.filter(Char::isDigit).take(3) }, "BPM", keyboard = KeyboardType.Number, error = !bpmOk)
+                        GhostButton("TAP tempo", onClick = ::recordTap)
+                    }
                     PalcoField(
                         dur, { dur = it.filter { c -> c.isDigit() || c == ':' }.take(5) }, "Durata", modifier = Modifier.weight(1f),
                         keyboard = KeyboardType.Text, supporting = "3:40", error = !durOk,
@@ -160,10 +202,40 @@ fun EditorScreen(
                     "TESTO E ACCORDI", color = Palco.Dim, fontFamily = Condensed, fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 6.dp),
                 )
-                PalcoField(
-                    body, { body = it }, "Chart", singleLine = false, minLines = 10, mono = true,
-                    supporting = "Accordi tra [quadre]. Le righe con # sono sezioni.",
-                )
+                Segmented(listOf("Modifica", "Anteprima"), if (preview) 1 else 0) { preview = it == 1 }
+                if (!preview) {
+                    PalcoField(
+                        body, { body = it }, "Chart", singleLine = false, minLines = 10, mono = true,
+                        supporting = "Accordi tra [quadre]. Le righe con # sono sezioni.",
+                    )
+                } else {
+                    val engKey = toEnglish(tone.trim()).ifBlank { "C" }
+                    val lines = remember(body, engKey, opt) {
+                        renderSheet(
+                            normalizeBody(body),
+                            SheetOpts(
+                                tr = 0,
+                                ital = opt.italian,
+                                flat = flatFor(engKey, opt.accid),
+                                roots = opt.roots,
+                                plain = opt.plain,
+                            ),
+                        )
+                    }
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Palco.Panel)
+                            .border(1.dp, Palco.Line, RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                    ) {
+                        if (lines.isEmpty()) {
+                            Text("Nessun testo da mostrare.", color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp)
+                        } else {
+                            lines.forEach { line -> SheetLineView(line, fs = 19, caps = opt.caps) }
+                        }
+                    }
+                }
                 // un tab incollato grezzo (accordi sopra il testo) si legge male: si offre la conversione
                 if (looksRawTab(body)) {
                     Text(
@@ -201,6 +273,18 @@ fun EditorScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    if (confirmDiscard) PalcoDialog(
+        title = "Modifiche non salvate",
+        confirmText = "Esci senza salvare",
+        onConfirm = { confirmDiscard = false; onClose() },
+        onDismiss = { confirmDiscard = false },
+    ) {
+        Text(
+            "Ci sono modifiche aperte su questo brano. Se esci adesso andranno perse.",
+            color = Palco.Dim, fontFamily = Condensed, fontSize = 15.sp,
+        )
     }
 
     if (confirmDelete && onDelete != null) PalcoDialog(

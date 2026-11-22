@@ -394,6 +394,7 @@ private fun App(
             val inSet = band.curSet?.items.orEmpty().any { it.type == "song" && it.id == song?.id }
             EditorScreen(
                 band = band,
+                opt = db.opt,
                 song = song,
                 draft = if (song == null) draft else null,
                 inSetInitial = if (song == null) true else inSet,

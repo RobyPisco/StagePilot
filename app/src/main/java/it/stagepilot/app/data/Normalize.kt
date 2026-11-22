@@ -47,6 +47,7 @@ fun normalizeOptions(o: Options): Options = o.copy(
     notation = if (o.notation == "it") "it" else "en",
     accid = if (o.accid in listOf("auto", "sharp", "flat")) o.accid else "auto",
     fs = clampInt(o.fs, 14, 48),
+    pedal = if (o.pedal == "page") "page" else "song",
 )
 
 /** Un database sempre utilizzabile: almeno un gruppo, gruppo corrente valido. */

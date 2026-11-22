@@ -137,4 +137,20 @@ class CoreTest {
         assertEquals(listOf(1, 0, 2), ordinals(e))
         assertEquals("3:20", mmss(200))
     }
+
+    @Test fun tapTempoCalculatesBpmAndHandlesGaps() {
+        assertNull(bpmFromTaps(emptyList()))
+        assertNull(bpmFromTaps(listOf(1000L)))
+        assertEquals(120, bpmFromTaps(listOf(1000L, 1500L, 2000L)))
+        assertEquals(100, bpmFromTaps(listOf(1000L, 1600L, 2200L)))
+        assertEquals(120, bpmFromTaps(listOf(1000L, 5000L, 5500L)))
+        assertEquals(300, bpmFromTaps(listOf(1000L, 1050L)))
+        assertEquals(30, bpmFromTaps(listOf(1000L, 3400L)))
+    }
+
+    @Test fun normalizePedalOption() {
+        assertEquals("song", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options()).pedal)
+        assertEquals("page", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(pedal = "page")).pedal)
+        assertEquals("song", it.stagepilot.app.data.normalizeOptions(it.stagepilot.app.data.Options(pedal = "other")).pedal)
+    }
 }

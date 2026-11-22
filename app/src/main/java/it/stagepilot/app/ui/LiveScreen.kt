@@ -223,6 +223,11 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
         }
     }
 
+    fun scrollHalfPage(dir: Int) {
+        val step = (scroll.viewportSize * 0.55f).toInt().coerceAtLeast(180)
+        scope.launch { scroll.animateScrollTo((scroll.value + dir * step).coerceIn(0, scroll.maxValue)) }
+    }
+
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
@@ -230,10 +235,12 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
         Modifier.fillMaxSize().background(Palco.Pitch).systemBarsPadding()
             .focusRequester(focus).focusable()
             .onPreviewKeyEvent { ev ->
-                // girapagine Bluetooth e tastiere: stessi tasti dell'app web
+                // girapagine Bluetooth e tastiere: cambio brano o scorrimento mezza pagina
                 if (ev.type != KeyEventType.KeyDown) false else when (ev.key) {
-                    Key.DirectionRight, Key.PageDown -> { go(1); true }
-                    Key.DirectionLeft, Key.PageUp -> { go(-1); true }
+                    Key.DirectionRight, Key.PageDown -> { if (opt.pedal == "page") scrollHalfPage(1) else go(1); true }
+                    Key.DirectionLeft, Key.PageUp -> { if (opt.pedal == "page") scrollHalfPage(-1) else go(-1); true }
+                    Key.DirectionDown -> { scrollHalfPage(1); true }
+                    Key.DirectionUp -> { scrollHalfPage(-1); true }
                     Key.Spacebar -> { togglePlay(); true }
                     Key.Escape -> { onClose(); true }
                     else -> false
@@ -342,8 +349,8 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
                         }
                         val seen=mutableSetOf<String>()
                         lines.forEach { l ->
-                            if(l is SheetLine.Section && seen.add(l.text)) Box(Modifier.onGloballyPositioned {sectionOffsets[l.text]=it.positionInParent().y.toInt()}) {SheetLineView(l,opt.fs)}
-                            else SheetLineView(l,opt.fs)
+                            if(l is SheetLine.Section && seen.add(l.text)) Box(Modifier.onGloballyPositioned {sectionOffsets[l.text]=it.positionInParent().y.toInt()}) {SheetLineView(l,opt.fs,opt.caps)}
+                            else SheetLineView(l,opt.fs,opt.caps)
                         }
                     }
                 }
@@ -512,7 +519,7 @@ fun LiveScreen(db: DB, startIndex: Int, store: Store, onClose: () -> Unit, liveS
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SheetLineView(line: SheetLine, fs: Int) {
+internal fun SheetLineView(line: SheetLine, fs: Int, caps: Boolean = false) {
     when (line) {
         SheetLine.Blank -> Spacer(Modifier.height((fs * 0.6f).dp))
         is SheetLine.Section -> Text(
@@ -534,10 +541,13 @@ private fun SheetLineView(line: SheetLine, fs: Int) {
                             s.chord.ifEmpty { " " }, color = Palco.Amber, fontFamily = Mono, fontWeight = FontWeight.SemiBold,
                             fontSize = (fs * 0.92f).sp, softWrap = false, modifier = Modifier.padding(end = 8.dp),
                         )
-                        if (anyText) Text(
-                            s.text.ifEmpty { " " }, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Medium,
-                            fontSize = fs.sp, softWrap = true,
-                        )
+                        if (anyText) {
+                            val txt = if (caps) s.text.uppercase() else s.text
+                            Text(
+                                txt.ifEmpty { " " }, color = Palco.Ink, fontFamily = Condensed, fontWeight = FontWeight.Medium,
+                                fontSize = fs.sp, softWrap = true,
+                            )
+                        }
                     }
                 }
             }

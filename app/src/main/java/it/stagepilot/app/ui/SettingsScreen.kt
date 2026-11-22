@@ -130,8 +130,13 @@ fun SettingsScreen(
                     Toggle("Cronometro del set", "Il tempo trascorso, in testata.", opt.timer) { v -> store.updateOptions { it.copy(timer = v) } }
                     Toggle("Lampeggio dei BPM", "Un cerchio in testata che batte il tempo del brano: per attaccare giusti.", opt.pulse) { v -> store.updateOptions { it.copy(pulse = v) } }
                     Toggle("Click del metronomo", "In live tocchi il cerchio del battito per sentire il tic (e di nuovo per fermarlo). Parte sempre spento.", opt.click) { v -> store.updateOptions { it.copy(click = v) } }
+                    Toggle("Testo in maiuscolo", "Solo il cantato: gli accordi restano com'erano.", opt.caps) { v -> store.updateOptions { it.copy(caps = v) } }
                     Toggle("Solo le note fondamentali", "Per chi suona il basso: Am7 diventa A, C/G diventa G.", opt.roots) { v -> store.updateOptions { it.copy(roots = v) } }
                     Toggle("Solo testo", "Senza accordi: il foglio di chi canta.", opt.plain) { v -> store.updateOptions { it.copy(plain = v) } }
+                }
+                Hint("Pedale Bluetooth / tastiera (frecce destra/sinistra e PagSu/PagGiù)")
+                Segmented(listOf("Brano prec / succ", "Scorri pagina"), if (opt.pedal == "page") 1 else 0) { i ->
+                    store.updateOptions { it.copy(pedal = if (i == 1) "page" else "song") }
                 }
 
                 // ── backup ──

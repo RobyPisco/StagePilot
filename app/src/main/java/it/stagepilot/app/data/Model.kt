@@ -120,6 +120,8 @@ data class Options(
     val caps: Boolean = false,
     val roots: Boolean = false,
     val plain: Boolean = false,
+    /** "song" (brano prec/succ) oppure "page" (scorri mezza pagina) per pedale Bluetooth/tastiera */
+    val pedal: String = "song",
     val sort: String = "add",
     val liveSet: String = "",
     val liveIndex: Int = 0,
