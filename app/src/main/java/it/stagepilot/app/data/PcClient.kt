@@ -16,7 +16,7 @@ class SyncConflict(val paths: List<String>, val revision: Int) : Exception("Le s
 @Serializable data class MetadataResult(val found: Boolean = false, val selected: MetadataCandidate? = null, val candidates: List<MetadataCandidate> = emptyList(), val message: String = "", val error: String = "")
 @Serializable private data class TransferPoll(val device: String, val ready: Boolean)
 @Serializable private data class TransferFinish(val device: String, val sequence: Int, val state: String)
-@Serializable private data class TransferTicket(val sequence: Int = 0)
+@Serializable data class TransferTicket(val sequence: Int = 0, val mode: String = "merge")
 
 /** Un errore da dire a chi usa l'app, in italiano. */
 class PcException(message: String) : Exception(message)
@@ -24,12 +24,12 @@ class PcException(message: String) : Exception(message)
 /* Scarica la coda dei brani dalla pagina del PC (tools/pagina-pc), nella rete di casa. Il PC dà un
    codice di 4 cifre: senza, la coda non si legge. Solo HTTP in chiaro: è la rete di casa. */
 object PcClient {
-    suspend fun pollTransfer(address: String, code: String, device: String, ready: Boolean): Int = withContext(Dispatchers.IO) {
+    suspend fun pollTransfer(address: String, code: String, device: String, ready: Boolean): TransferTicket = withContext(Dispatchers.IO) {
         val c = open(address, code, "/api/transfer/poll", post = true)
         try {
             c.outputStream.use { it.write(AppJson.encodeToString(TransferPoll.serializer(), TransferPoll(device, ready)).toByteArray(Charsets.UTF_8)) }
-            if (c.responseCode != 200) return@withContext 0
-            AppJson.decodeFromString(TransferTicket.serializer(), c.inputStream.bufferedReader().use { it.readText() }).sequence
+            if (c.responseCode != 200) return@withContext TransferTicket()
+            AppJson.decodeFromString(TransferTicket.serializer(), c.inputStream.bufferedReader().use { it.readText() })
         } finally { c.disconnect() }
     }
     suspend fun finishTransfer(address: String, code: String, device: String, sequence: Int, state: String) = withContext(Dispatchers.IO) {

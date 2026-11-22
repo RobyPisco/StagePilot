@@ -11,12 +11,14 @@ class TransferHub:
         self.sequence = 0
         self.revision = 0
         self.requested = 0
+        self.mode = 'merge'
         self.devices = {}
 
-    def request(self, revision):
+    def request(self, revision, mode='merge'):
         with self.lock:
             self.sequence += 1
             self.revision = revision
+            self.mode = 'replace' if mode == 'replace' else 'merge'
             self.requested = self.clock()
             for device in self.devices.values():
                 device.update(sequence=self.sequence, state='pending', issued=0)
@@ -42,7 +44,7 @@ class TransferHub:
                 elif device['state'] != 'in_progress' or now - device['issued'] >= 15:
                     sequence = self.sequence
                     device.update(state='in_progress', issued=now)
-            return {'sequence': sequence}
+            return {'sequence': sequence, 'mode': self.mode if sequence else 'merge'}
 
     def finish(self, data):
         with self.lock:

@@ -45,7 +45,7 @@ import it.stagepilot.app.data.Store
 fun SettingsScreen(
     db: DB, store: Store, onClose: () -> Unit, onGuide: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
     pcAddr: String, pcCode: String, pcStatus: String, pcBusy: Boolean,
-    onPcSave: (String, String) -> Unit, onPcFetch: () -> Unit,
+    onPcSave: (String, String) -> Unit, onPcFetch: () -> Unit, onPcReplace: () -> Unit,
 ) {
     val band = db.band
     val opt = db.opt
@@ -59,6 +59,7 @@ fun SettingsScreen(
     var renameSet by remember { mutableStateOf<String?>(null) }
     var deleteSet by remember { mutableStateOf<String?>(null) }
     var deleteBand by remember { mutableStateOf(false) }
+    var confirmPcReplace by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onClose)
 
@@ -190,10 +191,11 @@ fun SettingsScreen(
                     code, { code = it.filter(Char::isDigit).take(6); onPcSave(addr, code) }, "Codice",
                     keyboard = KeyboardType.Number, supporting = "6 cifre, le mostra lo studio web",
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GhostButton(if (pcBusy) "Sincronizzo…" else "Sincronizza") { if (!pcBusy) onPcFetch() }
-                    if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    GhostButton("Sostituisci dal PC", danger = true) { if (!pcBusy) confirmPcReplace = true }
                 }
+                if (pcStatus.isNotEmpty()) Text(pcStatus, color = Palco.Dim, fontFamily = Sans, fontSize = 14.sp)
 
                 Spacer(Modifier.height(8.dp))
                 // la versione vera dell'app, letta dal pacchetto: così non resta mai indietro rispetto alla build
@@ -228,6 +230,12 @@ fun SettingsScreen(
                 color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
             )
         }
+    }
+    if (confirmPcReplace) PalcoDialog("Sostituire con il PC?", "Sostituisci", { confirmPcReplace = false; onPcReplace() }, { confirmPcReplace = false }) {
+        Text(
+            "Tutti i brani, le scalette e le prove sul tablet verranno sostituiti con quelli presenti ora sul PC. Le preferenze di lettura del tablet restano intatte.",
+            color = Palco.Dim, fontFamily = Sans, fontSize = 15.sp,
+        )
     }
     if (deleteBand) PalcoDialog("Eliminare il gruppo?", "Elimina", { store.deleteBand(band.id); deleteBand = false }, { deleteBand = false }) {
         Text(

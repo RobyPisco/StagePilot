@@ -82,7 +82,7 @@ def make_server(port=8765, data_dir=None):
                 if not isinstance(data,dict): raise ValueError('Richiesta non valida.')
                 path=urlsplit(self.path).path
                 if path=='/api/metadata': return self.reply(metadata.identify(data))
-                if path=='/api/transfer/request': return self.reply(transfers.request(library.get()['revision']))
+                if path=='/api/transfer/request': return self.reply(transfers.request(library.get()['revision'], data.get('mode', 'merge') if isinstance(data, dict) else 'merge'))
                 if path=='/api/transfer/poll': return self.reply(transfers.poll(data))
                 if path=='/api/transfer/finish': return self.reply(transfers.finish(data))
                 if path=='/api/state': return self.reply(library.save(data['db'],data['revision']))

@@ -153,10 +153,17 @@ class Library:
     def sync(self, base, device, policy=None, expected_revision=None, delivery=False):
         validate_db(device)
         if base is not None: validate_db(base)
-        if policy not in (None, 'device', 'pc'): raise ValueError('Scelta del conflitto non valida.')
+        if policy not in (None, 'device', 'pc', 'pc_replace'): raise ValueError('Scelta del conflitto non valida.')
         if type(delivery) is not bool: raise ValueError('Tipo di trasferimento non valido.')
         with self.lock:
             current = self.get()
+            if policy == 'pc_replace':
+                # Il PC ha precedenza totale: il tablet diventa una copia esatta della libreria PC,
+                # conservando solo le proprie preferenze personali di lettura (opt).
+                pc_db = copy.deepcopy(current['db'])
+                if isinstance(device, dict) and isinstance(device.get('opt'), dict):
+                    pc_db['opt'] = copy.deepcopy(device['opt'])
+                return {'db': pc_db, 'revision': current['revision'], 'conflicts': []}, 200
             if policy is not None and expected_revision != current['revision']:
                 return {'error': 'Il PC è cambiato dopo la conferma. Sincronizza di nuovo.'}, 409
             # Only a verified, untouched initial database may be treated as the

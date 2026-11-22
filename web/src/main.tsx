@@ -191,11 +191,18 @@ function App() {
       clearInterval(timer);
     };
   }, []);
-  async function sendToTablet() {
+  async function sendToTablet(mode: "merge" | "replace" = "merge") {
     if (busy || sending) return;
+    if (
+      mode === "replace" &&
+      !confirm(
+        "Sostituire tutti i brani, le scalette e le prove sul tablet con quelli presenti ora sul PC?\n\nLe preferenze personali del tablet (tema, lingua, notazione, carattere) restano intatte.",
+      )
+    )
+      return;
     setSending(true);
     try {
-      setTransfer(await api<Transfer>("transfer/request", {}));
+      setTransfer(await api<Transfer>("transfer/request", { mode }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Trasferimento non riuscito.");
     } finally {
@@ -438,10 +445,18 @@ function App() {
                   <button
                     className="sp-primary sp-send-tablet"
                     disabled={busy || sending}
-                    onClick={sendToTablet}
+                    onClick={() => void sendToTablet("merge")}
                   >
                     <TabletSmartphone />
                     {sending ? "Invio…" : "Invia al tablet"}
+                  </button>
+                  <button
+                    className="sp-ghost"
+                    disabled={busy || sending}
+                    title="Cancella i brani extra sul tablet e lo rende identico al PC"
+                    onClick={() => void sendToTablet("replace")}
+                  >
+                    Sostituisci tablet
                   </button>
                   <button
                     className="sp-iconbtn"

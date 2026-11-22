@@ -244,10 +244,10 @@ private fun App(
         while (true) {
             try {
                 val available = route == "main" && tab != 5 && !(tab == 2 && editingSet) && !pcBusy && syncConflict == null
-                val sequence = PcClient.pollTransfer(pcAddr, pcCode, deviceId, available)
-                if (sequence > 0 && route == "main" && tab != 5 && !(tab == 2 && editingSet) && !pcBusy && syncConflict == null) {
-                    remoteTransfer = sequence
-                    fetchPc(false)
+                val ticket = PcClient.pollTransfer(pcAddr, pcCode, deviceId, available)
+                if (ticket.sequence > 0 && route == "main" && tab != 5 && !(tab == 2 && editingSet) && !pcBusy && syncConflict == null) {
+                    remoteTransfer = ticket.sequence
+                    fetchPc(false, policy = if (ticket.mode == "replace") "pc_replace" else null)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (_: Exception) { /* Offline stage use remains independent. */ }
@@ -499,6 +499,7 @@ private fun App(
                         prefs.edit().putString("addr", a).putString("code", c).apply()
                     },
                     onPcFetch = { pcStatus = ""; fetchPc(silent = false) },
+                    onPcReplace = { pcStatus = ""; fetchPc(silent = false, policy = "pc_replace") },
                 )
             }
             }
