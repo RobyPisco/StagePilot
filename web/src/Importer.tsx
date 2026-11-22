@@ -211,6 +211,19 @@ export function Importer({
     // A paste/typing pause starts one lookup; changing a metadata field never does.
   }, [raw, auto]);
 
+  const durTrim = fields.dur.trim();
+  const bpmTrim = fields.bpm.trim();
+  const saveIssue = !fields.title.trim()
+    ? "Inserisci il titolo del brano."
+    : !converted.body
+      ? "Incolla il testo del brano prima di salvare."
+      : durTrim && !seconds(durTrim)
+        ? "Durata non valida: usa il formato mm:ss (es. 2:43)."
+        : bpmTrim &&
+            (!Number.isInteger(+bpmTrim) || +bpmTrim < 20 || +bpmTrim > 400)
+          ? "BPM deve essere un numero intero tra 20 e 400."
+          : "";
+
   return (
     <>
       <div className="sp-page-head">
@@ -396,28 +409,23 @@ export function Importer({
               <div className="sp-preview-chart sp-import-chart">
                 <Chart body={converted.body} />
               </div>
+              {saveIssue && (
+                <p className="sp-tiny" role="status" style={{ marginTop: 8 }}>
+                  {saveIssue}
+                </p>
+              )}
               <div className="sp-end-actions">
                 <button
                   className="sp-primary"
-                  disabled={
-                    busy ||
-                    loading ||
-                    !fields.title.trim() ||
-                    !converted.body ||
-                    (!!fields.dur && !seconds(fields.dur)) ||
-                    (!!fields.bpm &&
-                      (!Number.isInteger(+fields.bpm) ||
-                        +fields.bpm < 20 ||
-                        +fields.bpm > 400))
-                  }
+                  disabled={busy || loading || !!saveIssue}
                   onClick={async () => {
                     const ok = await onSave({
                       ...songDefaults(),
                       title: fields.title.trim(),
                       artist: fields.artist.trim(),
-                      key: fields.key,
-                      bpm: fields.bpm ? +fields.bpm : null,
-                      dur: fields.dur,
+                      key: fields.key.trim(),
+                      bpm: bpmTrim ? +bpmTrim : null,
+                      dur: durTrim,
                       capo: converted.capo,
                       body: converted.body,
                       source:

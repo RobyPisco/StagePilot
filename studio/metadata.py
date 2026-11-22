@@ -40,7 +40,7 @@ def title_key(text):
     return normal(re.sub(r'\s*[\[(](?:\d{4}\s+)?(?:re)?master(?:ed)?[^\])]*[\])]|\s+-\s+(?:\d{4}\s+)?remaster.*$', '', text, flags=re.I)) if isinstance(text, str) else ''
 
 
-_CHORD_TOK = re.compile(r'^(?:[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?\d*(?:/[A-G](?:#|b)?)?|N\.?C\.?)$')
+_CHORD_TOK = re.compile(r'^(?:[A-G][#b]?(?:maj|min|dim|aug|sus|add|m)?\d*(?:(?:maj|min|dim|aug|sus|add|[#b])\d+)*(?:/[A-G][#b]?)?|N\.?C\.?)$')
 _TENS = {'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90}
 _ONES = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9}
 

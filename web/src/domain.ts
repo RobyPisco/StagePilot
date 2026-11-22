@@ -132,7 +132,7 @@ export function songDefaults(): Song {
   };
 }
 export function seconds(d: string | undefined) {
-  const m = /^(\d+):([0-5]\d)$/.exec(d || "");
+  const m = /^(\d+):([0-5]\d)$/.exec((d || "").trim());
   return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
 }
 export function time(n: number) {
