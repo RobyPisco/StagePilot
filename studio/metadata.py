@@ -39,12 +39,34 @@ def title_key(text):
     return normal(re.sub(r'\s*[\[(](?:\d{4}\s+)?(?:re)?master(?:ed)?[^\])]*[\])]|\s+-\s+(?:\d{4}\s+)?remaster.*$', '', text, flags=re.I)) if isinstance(text, str) else ''
 
 
+_CHORD_TOK = re.compile(r'^(?:[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add)?\d*(?:/[A-G](?:#|b)?)?|N\.?C\.?)$')
+_TENS = {'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90}
+_ONES = {'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9}
+
+
+def _with_digits(phrase):
+    toks = phrase.split()
+    out, i, changed = [], 0, False
+    while i < len(toks):
+        if toks[i] in _TENS and i + 1 < len(toks) and toks[i + 1] in _ONES:
+            out.append(str(_TENS[toks[i]] + _ONES[toks[i + 1]]))
+            i += 2
+            changed = True
+        else:
+            out.append(toks[i])
+            i += 1
+    return ' '.join(out) if changed else None
+
+
 def lyric_lines(body):
     result = []
     for line in body.splitlines():
         if re.match(r'^\s*(?:#|\{|[A-Ga-g][#b]?\|)', line):
             continue
         line = re.sub(r'\[[^\]]*\]', '', line).strip()
+        toks = line.split()
+        if toks and all(_CHORD_TOK.match(t) for t in toks):
+            continue
         if len(words(line)) >= 2 and not re.fullmatch(r'[\s|%:./\-\d]+', line):
             result.append(line)
     return result
@@ -81,10 +103,13 @@ def title_queries(lines):
     for line in lines[:2] + lines[-2:]:
         p = normal(line)
         if 2 <= len(p.split()) <= 7 and p not in queries: queries.append(p)
+    for p in list(queries[:3]):
+        dig = _with_digits(p)
+        if dig and dig not in queries: queries.insert(0, dig)
     for p in list(queries[:2]):
         w = p.split()
         if len(w) > 3: queries.append(' '.join(w[-3:]))
-    return queries[:7]
+    return queries[:8]
 
 
 def mmss(value):
@@ -204,7 +229,7 @@ class MetadataLookup:
         if not artist and catalog:
             order = {artist_key(t['artist']['name']): i for i, t in reversed(list(enumerate(catalog)))}
             top_score = ranked[0]['score']
-            ranked.sort(key=lambda c: (0 if c['score'] >= top_score - .03 else 1, order.get(artist_key(c['artist']), 999), -c['score']))
+            ranked.sort(key=lambda c: (0 if c['score'] >= top_score - .04 else 1, 1 if artist_key(c['artist']) == 'variousartists' else 0, order.get(artist_key(c['artist']), 999), -c['score']))
         selected = ranked[0]
         versions = [t for t in catalog if artist_key(t['artist']['name']) == artist_key(selected['artist']) and title_key(t['title']) == title_key(selected['title'])]
         if not versions:

@@ -450,14 +450,12 @@ function App() {
                     <TabletSmartphone />
                     {sending ? "Invio…" : "Invia al tablet"}
                   </button>
-                  <button
-                    className="sp-ghost"
+                  <Button
                     disabled={busy || sending}
-                    title="Cancella i brani extra sul tablet e lo rende identico al PC"
                     onClick={() => void sendToTablet("replace")}
                   >
                     Sostituisci tablet
-                  </button>
+                  </Button>
                   <button
                     className="sp-iconbtn"
                     onClick={undo}
