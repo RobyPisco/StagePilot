@@ -90,7 +90,7 @@ def title_queries(lines):
         for size in range(2, 7):
             for start in range(len(w) - size + 1):
                 phrase = w[start:start + size]
-                if len(set(phrase)) < 2 or all(p in STOP for p in phrase):
+                if any(phrase[i] == phrase[i + 1] for i in range(len(phrase) - 1)) or all(p in STOP for p in phrase):
                     continue
                 key = ' '.join(phrase)
                 if key in seen:
