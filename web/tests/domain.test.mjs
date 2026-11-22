@@ -34,6 +34,7 @@ test("deleting one song removes every reference but preserves pauses and other s
 });
 test("musical timing rejects invalid seconds and transposes slash bass independently", () => {
   assert.equal(seconds("3:40"), 220);
+  assert.equal(seconds(" 2:43 "), 163);
   assert.equal(seconds("3:99"), 0);
   assert.equal(transpose("C/G", 2), "D/A");
   assert.equal(transpose("Am7", -2), "Gm7");

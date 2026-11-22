@@ -122,6 +122,12 @@ def mmss(value):
     return f'{seconds // 60}:{seconds % 60:02d}' if 0 < seconds < 86400 else ''
 
 
+_EDITION_PAREN = re.compile(
+    r'\s*[\[(][^)\]]*\b(?:live|acoustic|remaster(?:ed)?|feat\.?|ft\.?|version|edit|mix|remix|demo|radio|deluxe|mono|stereo|single|explicit|clean|lp|cast|tribute|karaoke|instrumental)\b[^)\]]*[\])]',
+    re.I,
+)
+
+
 class MetadataLookup:
     def __init__(self, fetch=None, clock=time.monotonic, pause=time.sleep):
         self.fetch = fetch or self._fetch
@@ -187,13 +193,69 @@ class MetadataLookup:
         finally:
             self.lock.release()
 
+    def _itunes_titles(self, lines, deadline):
+        rich = [l for l in lines if len(words(l)) >= 4] or [l for l in lines if len(words(l)) >= 3]
+        if not rich:
+            return []
+        # Pick 2 distinct, information-rich snippets: start and mid/longest.
+        pairs = []
+        for i in range(len(rich)):
+            w = words(' '.join(rich[i:i + 2]))[:12]
+            if len(w) >= 6:
+                non_stop = sum(1 for x in w if x not in STOP)
+                pairs.append((i, non_stop, ' '.join(w)))
+        if not pairs:
+            w = words(' '.join(rich[:3]))[:12]
+            if len(w) >= 4:
+                pairs.append((0, len(w), ' '.join(w)))
+        snippets = []
+        if pairs:
+            snippets.append(pairs[0][2])
+            other = [p for p in pairs if p[0] >= max(2, len(rich) // 3)]
+            if other:
+                best_other = max(other, key=lambda p: p[1])
+                if best_other[2] not in snippets:
+                    snippets.append(best_other[2])
+        votes, labels, artists = Counter(), {}, Counter()
+        for snippet in snippets[:2]:
+            if self.clock() > deadline - 10:
+                break
+            try:
+                data = self._json('itunes.apple.com', '/search', {'term': snippet, 'entity': 'song', 'limit': 10}, deadline)
+                rows = data.get('results', []) if isinstance(data, dict) else []
+            except (OSError, ValueError):
+                continue
+            for pos, row in enumerate(rows):
+                t = row.get('trackName') if isinstance(row, dict) else None
+                a = row.get('artistName') if isinstance(row, dict) else None
+                if not isinstance(t, str) or not t.strip():
+                    continue
+                base = _EDITION_PAREN.sub('', t).strip() or t.strip()
+                k = title_key(base)
+                if not k:
+                    continue
+                weight = 2 if pos < 3 else 1
+                votes[k] += weight
+                labels.setdefault(k, base)
+                if isinstance(a, str) and a.strip():
+                    artists[(k, a.strip())] += weight
+        out = []
+        for k, _ in votes.most_common(3):
+            base = labels[k]
+            out.append(base)
+            top_a = [a for (tk, a), _ in artists.most_common() if tk == k][:2]
+            for a in top_a:
+                out.append(f'{base} {a}')
+        return out
+
     def _identify(self, body, title, artist, deadline):
         lines = lyric_lines(body)
         pasted = trigrams(lines)
-        queries = ([(title + ' ' + artist).strip()] if title else []) + title_queries(lines)
+        discovered = self._itunes_titles(lines, deadline) if (not title and self.fetch == self._fetch) else []
+        queries = ([(title + ' ' + artist).strip()] if title else []) + discovered + title_queries(lines)
         best = {}
         failures = 0
-        for query in dict.fromkeys(queries):
+        for q_idx, query in enumerate(dict.fromkeys(queries)):
             if self.clock() > deadline - 8: break
             try:
                 rows = self._json('lrclib.net', '/api/search', {'q': query}, deadline)
@@ -218,7 +280,7 @@ class MetadataLookup:
                 group = (title_key(actual_title), artist_key(actual_artist))
                 candidate = {'title': actual_title, 'artist': actual_artist, 'album': row.get('albumName') or '', 'dur': mmss(row.get('duration')), 'bpm': None, 'score': round(score, 3), 'matched': matched, 'sources': [{'label': 'Testo e riconoscimento · LRCLIB', 'url': 'https://lrclib.net/api/get/' + str(row.get('id', ''))}], 'recordingUrl': ''}
                 if group not in best or best[group]['score'] < score: best[group] = candidate
-            if best and max(c['score'] for c in best.values()) >= .75: break
+            if best and max(c['score'] for c in best.values()) >= .75 and q_idx >= min(len(discovered), 2): break
         ranked = sorted(best.values(), key=lambda c: -c['score'])
         # An explicit title/artist is also useful for instrumental charts.
         if not ranked and title:
@@ -227,14 +289,21 @@ class MetadataLookup:
                 ranked = [self._from_track(x, 0) for x in catalog[:4]]
         if not ranked:
             return {'found': False, 'candidates': [], 'message': 'I cataloghi non rispondono. Puoi riprovare o compilare i campi a mano.' if failures else 'Non ho riconosciuto il brano con sufficiente sicurezza. Indica titolo o artista e premi Cerca di nuovo.'}
-        ranked = ranked[:5]
         # Equal lyrics can belong to covers. Use catalogue rank only to propose
         # an order; keep alternatives visible rather than treating it as proof.
-        catalog = self._catalog(ranked[0]['title'], artist, deadline)
+        def _junk_lrclib(c):
+            tk, ak = title_key(c['title']).replace(' ', ''), artist_key(c['artist'])
+            return 1 if (not ak or ak == 'variousartists' or ak == tk or (len(ak) >= 4 and ak in tk)) else 0
+        ranked.sort(key=lambda c: (_junk_lrclib(c), -c['score']))
+        catalog_title = ranked[0]['title']
+        catalog = self._catalog(catalog_title, artist, deadline)
+        if not catalog and discovered and not title:
+            catalog = self._catalog(discovered[0], artist, deadline)
         if not artist and catalog:
             order = {artist_key(t['artist']['name']): i for i, t in reversed(list(enumerate(catalog)))}
             top_score = ranked[0]['score']
-            ranked.sort(key=lambda c: (0 if c['score'] >= top_score - .04 else 1, 1 if artist_key(c['artist']) == 'variousartists' else 0, order.get(artist_key(c['artist']), 999), -c['score']))
+            ranked.sort(key=lambda c: (0 if c['score'] >= top_score - .06 else 1, _junk_lrclib(c), order.get(artist_key(c['artist']), 999), -c['score']))
+        ranked = ranked[:5]
         selected = ranked[0]
         versions = [t for t in catalog if artist_key(t['artist']['name']) == artist_key(selected['artist']) and title_key(t['title']) == title_key(selected['title'])]
         if not versions:
