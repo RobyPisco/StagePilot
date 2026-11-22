@@ -7,6 +7,7 @@ from collections import Counter, OrderedDict
 import copy
 from email.utils import parsedate_to_datetime
 import hashlib
+import html as _html
 import json
 import math
 import re
@@ -247,6 +248,12 @@ class MetadataLookup:
                     selected['bpm'] = int(round(tempo))
                     selected['sources'].append({'label': 'BPM · Deezer', 'url': selected['recordingUrl']})
             except (OSError, ValueError): pass
+        # Ripiego SongBPM solo quando Deezer non ha i BPM (e non nei test offline con fetch mockato).
+        if selected['bpm'] is None and self.fetch == self._fetch and deadline - self.clock() > 1.5:
+            sb = self._songbpm(selected['title'], selected['artist'], deadline)
+            if sb:
+                selected['bpm'] = sb['bpm']
+                selected['sources'].append({'label': 'BPM · SongBPM', 'url': 'https://songbpm.com' + sb['url']})
         # Never send fetched lyrics back to the browser or write them to disk.
         message = 'Versione proposta: controlla artista e registrazione prima di salvare.'
         if selected['bpm'] is None: message += ' BPM non disponibili nel catalogo: puoi inserirli a mano.'
@@ -258,6 +265,39 @@ class MetadataLookup:
             rows = data.get('data', []) if isinstance(data, dict) else []
             return [r for r in rows if isinstance(r, dict) and type(r.get('id')) is int and title_key(r.get('title', '')) == title_key(title) and isinstance(r.get('artist'), dict) and isinstance(r['artist'].get('name'), str) and (not artist or artist_key(r['artist']['name']) == artist_key(artist))]
         except (OSError, ValueError): return []
+
+    def _songbpm(self, title, artist, deadline):
+        q = (title + ' ' + artist).strip()
+        if not q: return None
+        cache_key = 'songbpm:' + q.lower()
+        now = self.clock()
+        saved = self.responses.get(cache_key)
+        if saved and now - saved[0] < 3600:
+            self.responses.move_to_end(cache_key)
+            return copy.deepcopy(saved[1])
+        try:
+            body = urllib.parse.urlencode({'query': q}).encode('utf-8')
+            req = urllib.request.Request('https://songbpm.com/searches', data=body, headers={'User-Agent': 'Mozilla/5.0 (compatible; StagePilot/1)'})
+            with urllib.request.urlopen(req, timeout=min(8, max(1.0, deadline - self.clock()))) as r:
+                page = r.read(1_000_000).decode('utf-8', 'replace')
+            want_t, want_a = title_key(title), artist_key(artist)
+            clean = lambda s: _html.unescape(re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', s))).strip()
+            best = None
+            for m in re.finditer(r'<a class="[^"]*" href="(/@[^"]+)">(.*?)</a>', page, re.S):
+                card = m.group(2)
+                ps = [clean(x) for x in re.findall(r'<p[^>]*>(.*?)</p>', card, re.S)]
+                spans = [clean(x) for x in re.findall(r'<span[^>]*>(.*?)</span>', card, re.S)]
+                if len(ps) < 2: continue
+                if title_key(ps[1]) != want_t or artist_key(ps[0]) != want_a: continue
+                vals = dict(zip(spans[0::2], spans[1::2]))
+                bpm = int(vals['BPM']) if vals.get('BPM', '').isdigit() else None
+                if bpm and 20 <= bpm <= 400:
+                    best = {'bpm': bpm, 'url': m.group(1)}
+                    break
+            self.responses[cache_key] = (self.clock(), best)
+            return copy.deepcopy(best)
+        except (OSError, ValueError):
+            return None
 
     @staticmethod
     def _from_track(track, score):
